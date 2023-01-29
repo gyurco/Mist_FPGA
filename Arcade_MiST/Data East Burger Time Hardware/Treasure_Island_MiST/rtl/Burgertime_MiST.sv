@@ -35,6 +35,7 @@ localparam CONF_STR = {
 	"O2,Rotate Controls,Off,On;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
+	"O7,Pause,Off,On;",
 	"DIP;",
 	"T0,Reset;",
 	"V,v1.0.",`BUILD_DATE
@@ -45,6 +46,7 @@ wire [1:0] scanlines = status[4:3];
 wire       blend = status[5];
 wire [7:0] dsw1 = status[15:8];
 wire [7:0] dsw2 = status[23:16];
+wire       pause = status[7];
 
 wire clk_48, clk_12;
 wire pll_locked;
@@ -178,13 +180,13 @@ wire [10:0] audio;
 wire hs, vs, cs;
 wire [2:0] r, g;
 wire [1:0] b;
-wire       hb, vb;
-wire		  blankn = ~(hb | vb);
+wire       hb, vb, blankn = ~(hb | vb);
 
 burger_time burger_time (
 	.clock_12       (clk_12),
 	.reset          (reset),
 	.hwsel          (core_mod),
+	.pause          (pause),
 	.video_r        (r),
 	.video_g        (g),
 	.video_b        (b),

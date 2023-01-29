@@ -34,8 +34,9 @@ port
 (
 	clock_12     : in std_logic;
 	reset        : in std_logic;
-	hwsel        : in integer range 0 to 1;
-	
+	hwsel        : in integer range 0 to 2;
+	pause        : in std_logic;
+
 	video_r      : out std_logic_vector(2 downto 0);
 	video_g      : out std_logic_vector(2 downto 0);
 	video_b      : out std_logic_vector(1 downto 0);
@@ -153,7 +154,8 @@ architecture syn of burger_time is
 	signal fg_bits             : std_logic_vector( 2 downto 0);
 
 	-- color palette 
-	signal palette_addr : std_logic_vector(3 downto 0);
+	signal palette_bank : std_logic;
+	signal palette_addr : std_logic_vector(5 downto 0);
 	signal palette_cs   : std_logic;
 	signal palette_we   : std_logic;
 	signal palette_do   : std_logic_vector(7 downto 0);
@@ -164,12 +166,14 @@ architecture syn of burger_time is
 
 	-- background control
 	signal scroll1_we : std_logic;
-	signal scroll1    : std_logic_vector(4 downto 0);
+	signal scroll1    : std_logic_vector( 4 downto 0);
 	signal scroll2_we : std_logic;
-	signal scroll2    : std_logic_vector(7 downto 0);
+	signal scroll2    : std_logic_vector( 7 downto 0);
+	signal scroll     : std_logic_vector( 9 downto 0);
 
 	signal bg_hcnt	      : std_logic_vector( 7 downto 0);
 	signal bg_scan_hcnt  : std_logic_vector( 9 downto 0);
+	signal bg_scan_hcnt_offset : std_logic_vector( 9 downto 0);
 	signal bg_scan_addr  : std_logic_vector( 9 downto 0);
 	signal bg_grphx_addr : std_logic_vector(10 downto 0); 
 	signal bg_grphx_1_do : std_logic_vector( 7 downto 0);
@@ -195,9 +199,15 @@ architecture syn of burger_time is
 	signal fg_graphx_1_we : std_logic;
 	signal fg_graphx_2_we : std_logic;
 	signal fg_graphx_3_we : std_logic;
+	signal color_ram_we : std_logic;
 
-    constant HW_BTIME : integer := 0;
-    constant HW_TISLAND : integer := 1;
+	signal zoar_scroll_we : std_logic;
+	type t_zoar_scroll is array (3 downto 0) of std_logic_vector(3 downto 0);
+	signal zoar_scroll: t_zoar_scroll;
+
+	constant HW_BTIME : integer := 0;
+	constant HW_TISLAND : integer := 1;
+	constant HW_ZOAR : integer := 2;
 
 begin
 
@@ -269,6 +279,7 @@ begin
 		cpu_nmi_n <= '1';
 		had_written <='0';
 		cocktail_flip <= '0';
+		palette_bank <= '0';
 	elsif rising_edge(clock_12)then
 			coin_r <= btn_system(6) or btn_system(7);
 			if coin_r = '0' and (btn_system(6) = '1' or btn_system(7) = '1') then
@@ -286,63 +297,117 @@ begin
 			end if;
 			if cocktail_we = '1' then
 				cocktail_flip <= dip_sw1(6) and cpu_do(0);
+				palette_bank <= cpu_do(4);
 			end if;
 	end if;
 end process;	
 
 
-cpu_ena <= '1' when hcnt(2 downto 0) = "111" and clock_6 = '1' else '0';
-  
--- chip select
-wram_cs     <= '1' when cpu_addr(15 downto 11) = "00000"         else '0'; -- working ram     0000-07ff
-io_cs       <= '1' when cpu_addr(15 downto  3) = "0100000000000" else '0'; -- player/dip_sw   4000-4007 (4004) 
-fg_ram_cs   <= '1' when cpu_addr(15 downto 12) = "0001"          else '0'; -- foreground ram  1000-1fff
-palette_cs  <= '1' when cpu_addr(15 downto  4) = "000011000000"  else '0'; -- palette ram     0c00-0c0f
-prog_rom_cs <= '1' when cpu_addr(15) = '1' else '0';                       -- program rom     9000-ffff
+cpu_ena <= '1' when hcnt(2 downto 0) = "111" and clock_6 = '1' and pause = '0' else '0';
+ 
+process (hwsel, cpu_addr, cpu_rw_n, cpu_ena, io_cs, fg_ram_cs, palette_cs, wram_cs, prog_rom_cs,
+	dip_sw1, dip_sw2, btn_p1, btn_p2, btn_system, wram_do, prog_rom_do, fg_ram_low_do, fg_ram_high_do)
+begin
+	wram_cs        <= '0';
+	io_cs          <= '0';
+	fg_ram_cs      <= '0';
+	palette_cs     <= '0';
+	prog_rom_cs    <= '0';
 
--- write enable
-wram_we        <= '1' when wram_cs = '1'   and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 0000-07ff
-raz_nmi_we     <= '1' when io_cs = '1'     and cpu_addr(2 downto 0) = "000" and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 4000
-scroll1_we     <= '1' when io_cs = '1'     and cpu_addr(2 downto 0) = "100" and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 4004
-scroll2_we     <= '1' when io_cs = '1'     and cpu_addr(2 downto 0) = "101" and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 4005
-cocktail_we    <= '1' when io_cs = '1'     and cpu_addr(2 downto 0) = "010" and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 4002
-sound_req      <= '1' when io_cs = '1'     and cpu_addr(2 downto 0) = "011" and cpu_rw_n = '0'         else '0'; -- 4003
-fg_ram_low_we  <= '1' when fg_ram_cs = '1' and cpu_addr(10) = '0' and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 1000-13ff & 1800-4bff
-fg_ram_high_we <= '1' when fg_ram_cs = '1' and cpu_addr(10) = '1' and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 1400-17ff & 1c00-4fff
-palette_we     <= '1' when palette_cs = '1'                       and cpu_rw_n = '0' and cpu_ena = '1' else '0'; -- 0c00-0c0f
+	wram_we        <= '0';
+	raz_nmi_we     <= '0';
+	scroll1_we     <= '0';
+	scroll2_we     <= '0';
+	cocktail_we    <= '0';
+	sound_req      <= '0';
+	fg_ram_low_we  <= '0';
+	fg_ram_high_we <= '0';
+	palette_we     <= '0';
+	zoar_scroll_we <= '0';
+	cpu_di         <= x"FF";
+	
+	case hwsel is
+		when HW_BTIME | HW_TISLAND =>
+			-- chip select
+			if cpu_addr(15 downto 11) = "00000"         then wram_cs <= '1';     end if; -- working ram     0000-07ff
+			if cpu_addr(15 downto  3) = "0100000000000" then io_cs <= '1';       end if; -- player/dip_sw   4000-4007 (4004) 
+			if cpu_addr(15 downto 12) = "0001"          then fg_ram_cs   <= '1'; end if; -- foreground ram  1000-1fff
+			if cpu_addr(15 downto  4) = "000011000000"  then palette_cs  <= '1'; end if; -- palette ram     0c00-0c0f
+			if cpu_addr(15) = '1'                       then prog_rom_cs <= '1'; end if; -- program rom     9000-ffff
 
--- cpu di mux
-cpu_di <= wram_do        when wram_cs     = '1' else
-			 prog_rom_do    when prog_rom_cs = '1' else
-			 dip_sw1 		 when (io_cs = '1') and (cpu_addr(2 downto 0) = "011") else
-			 dip_sw2        when (io_cs = '1') and (cpu_addr(2 downto 0) = "100") else
-			 btn_p1         when (io_cs = '1') and (cpu_addr(2 downto 0) = "000") else
-			 btn_p2         when (io_cs = '1') and (cpu_addr(2 downto 0) = "001") else
-			 btn_system     when (io_cs = '1') and (cpu_addr(2 downto 0) = "010") else
-			 fg_ram_low_do  when (fg_ram_cs = '1') and (cpu_addr(10) = '0') else
-			 "000000"&fg_ram_high_do when (fg_ram_cs = '1') and (cpu_addr(10) = '1') else
-          X"FF";
-			 
+			if    (io_cs = '1') and (cpu_addr(2 downto 0) = "011") then cpu_di <= dip_sw1;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "100") then cpu_di <= dip_sw2;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "000") then cpu_di <= btn_p1;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "001") then cpu_di <= btn_p2;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "010") then cpu_di <= btn_system; end if;
+
+			-- write enable
+			if cpu_rw_n = '0' and cpu_ena = '1' then
+				if wram_cs = '1' then wram_we <= '1'; end if; -- 0000-07ff
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "000" then raz_nmi_we <= '1';  end if; -- 4000
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "010" then cocktail_we <= '1'; end if; -- 4002
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "011" then sound_req <= '1';   end if; -- 4003
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "100" then scroll1_we <= '1';  end if; -- 4004
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "101" then scroll2_we <= '1';  end if; -- 4005
+				if fg_ram_cs = '1' and cpu_addr(10) = '0' then fg_ram_low_we <= '1';         end if; -- 1000-13ff & 1800-4bff
+				if fg_ram_cs = '1' and cpu_addr(10) = '1' then fg_ram_high_we <= '1';        end if; -- 1400-17ff & 1c00-4fff
+				if palette_cs = '1' then palette_we <= '1';                                  end if; -- 0c00-0c0f
+			end if;
+		when HW_ZOAR =>
+			-- chip select
+			if cpu_addr(15 downto 11) = "00000"         then wram_cs <= '1';     end if; -- working ram     0000-07ff
+			if cpu_addr(15 downto  3) = "1001100000000" then io_cs <= '1';       end if; -- player/dip_sw   9800-9807 
+			if cpu_addr(15 downto 12) = "1000"          then fg_ram_cs   <= '1'; end if; -- foreground ram  8000-8fff
+			if cpu_addr(15 downto 14) = "11"            then prog_rom_cs <= '1'; end if; -- program rom     d000-ffff
+
+			if    (io_cs = '1') and (cpu_addr(2 downto 0) = "000") then cpu_di <= dip_sw1;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "001") then cpu_di <= dip_sw2;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "010") then cpu_di <= btn_p1;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "011") then cpu_di <= btn_p2;
+			elsif (io_cs = '1') and (cpu_addr(2 downto 0) = "100") then cpu_di <= btn_system; end if;
+
+			-- write enable
+			if cpu_rw_n = '0' and cpu_ena = '1' then
+				if wram_cs = '1'      then wram_we <= '1';     end if; -- 0000-07ff
+				if cpu_addr = x"9000" then cocktail_we <= '1'; end if; -- 9000
+				if io_cs = '1'     and cpu_addr(2) = '0'        then zoar_scroll_we <= '1';  end if; -- 9800-9803
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "101" then scroll1_we <= '1';  end if; -- 9805
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "100" then scroll2_we <= '1';  end if; -- 9804
+				if io_cs = '1'     and cpu_addr(2 downto 0) = "110" then sound_req <= '1';   end if; -- 9806
+				if fg_ram_cs = '1' and cpu_addr(10) = '0' then fg_ram_low_we <= '1';         end if; -- 8000-83ff & 8800-8bff
+				if fg_ram_cs = '1' and cpu_addr(10) = '1' then fg_ram_high_we <= '1';        end if; -- 8400-87ff & 8c00-8fff
+			end if;
+		when others => null;
+	end case;
+
+	if    wram_cs = '1'     then cpu_di <= wram_do;
+	elsif prog_rom_cs = '1' then cpu_di <= prog_rom_do;
+	elsif (fg_ram_cs = '1') and (cpu_addr(10) = '0') then cpu_di <= fg_ram_low_do;
+	elsif (fg_ram_cs = '1') and (cpu_addr(10) = '1') then cpu_di <= "000000"&fg_ram_high_do; end if;
+
+end process;
+
 -- decrypt fetched instruction
 decrypt <= '1' when ((cpu_addr(15 downto 0) and X"0104") = X"0104") and (cpu_sync = '1') and (had_written = '1') else '0';
+--decrypt <= '1' when cpu_addr(8) = '1' and cpu_addr(2) = '1' and cpu_di(1 downto 0) /= "11" and (cpu_sync = '1') and (had_written = '1') else '0';
 cpu_di_dec <= cpu_di when decrypt = '0' else
  				  cpu_di(6) & cpu_di(5) & cpu_di(3) & cpu_di(4) & cpu_di(2) & cpu_di(7) & cpu_di(1 downto 0);
 
 ----------------------------				  
 -- foreground and sprites --
 ----------------------------
-    
+
 -- foreground ram addr
 fg_ram_addr_sel <= "00" when cpu_ena = '1' and cpu_addr(11) = '0' else
 						 "01" when cpu_ena = '1' and cpu_addr(11) = '1' else
 						 "10" when cpu_ena = '0' and hcnt(8) = '0' else
 						 "11";
-  
+
 with fg_ram_addr_sel select
 fg_ram_addr <= cpu_addr(4 downto 0) & cpu_addr(9 downto 5)   when "00",    -- cpu mirrored addressing
-				   cpu_addr(9 downto 0)                          when "01",    -- cpu normal addressing
-					vcnt_flip(7 downto 3) & hcnt_flip(7 downto 3) when "10",    -- foreground tile scan addressing
-					"00000" & hcnt(6 downto 2)                    when others;  -- sprite data scan addressing
+               cpu_addr(9 downto 0)                          when "01",    -- cpu normal addressing
+               vcnt_flip(7 downto 3) & hcnt_flip(7 downto 3) when "10",    -- foreground tile scan addressing
+               "00000" & hcnt(6 downto 2)                    when others;  -- sprite data scan addressing
 
 -- latch sprite data, 
 -- manage fg and sprite graphix rom address
@@ -410,7 +475,17 @@ begin
 	if rising_edge(clock_12) and clock_6 = '1' then
 		if hcnt(2 downto 0) = "101" then
 			if display_tile = '1' then
-				if hcnt8_r = '1' or hwsel = HW_BTIME then
+				if hwsel = HW_ZOAR then
+					if hcnt8_r = '1' then
+						fg_sp_grphx_1 <= fg_grphx_1_do;
+						fg_sp_grphx_2 <= fg_grphx_2_do;
+						fg_sp_grphx_3 <= fg_grphx_3_do;
+					else
+						fg_sp_grphx_1 <= fg_sp_grphx_1_do;
+						fg_sp_grphx_2 <= fg_sp_grphx_2_do;
+						fg_sp_grphx_3 <= fg_sp_grphx_3_do;
+					end if;
+				elsif hcnt8_r = '1' or hwsel = HW_BTIME then
 					fg_sp_grphx_1 <= fg_sp_grphx_1_do;
 					fg_sp_grphx_2 <= fg_sp_grphx_2_do;
 					fg_sp_grphx_3 <= fg_sp_grphx_3_do;
@@ -464,23 +539,36 @@ fg_bits <= sp_bits_out when (fg_sp_bits = "000") or (sp_bits_out/="000" and fg_l
 ----------------
 
 -- latch scroll1 & 2 data
-process (clock_12n,clock_6) 
+process (clock_12n,clock_6,reset)
 begin
-	if rising_edge(clock_12n) and clock_6 = '1' then	
-		if scroll1_we = '1' then 
+	if reset = '1' then
+		scroll1 <= (others => '0');
+		scroll2 <= (others => '0');
+	elsif rising_edge(clock_12n) and clock_6 = '1' then
+		if scroll1_we = '1' then
 			scroll1 <= cpu_do(4 downto 0);
-		end if;		
-		if scroll2_we = '1' then 
+		end if;
+		if scroll2_we = '1' then
 			scroll2 <= cpu_do;
-		end if;		
+		end if;
+		if zoar_scroll_we = '1' then
+			zoar_scroll(to_integer(unsigned(cpu_addr(1 downto 0)))) <= cpu_do(3 downto 0);
+		end if;
 	end if;
 end process;
 
 -- manage background rom map address
-bg_scan_hcnt <= (hcnt_flip) + (scroll1(1 downto 0)&scroll2) + "0011110010" when cocktail_flip = '0' else
-                (hcnt_flip) + (scroll1(1 downto 0)&scroll2) + "1100000101";
+scroll <= scroll1(1 downto 0)&scroll2;
 
-bg_map_addr <= '0'&scroll1(2) & bg_scan_hcnt(9 downto 4) & vcnt_flip(7 downto 4);
+bg_scan_hcnt_offset <= "0011110010" when cocktail_flip = '0' and hwsel = HW_BTIME else
+                       "1111110100" when cocktail_flip = '0' and hwsel /= HW_BTIME else
+                       "1100000101";
+
+bg_scan_hcnt <= hcnt_flip + scroll + bg_scan_hcnt_offset;
+
+bg_map_addr <= '0'&scroll1(2) & bg_scan_hcnt(9 downto 4) & vcnt_flip(7 downto 4) when hwsel = HW_BTIME else
+               scroll1(3 downto 2) & bg_scan_hcnt(9 downto 4) & vcnt_flip(7 downto 4) when hwsel = HW_TISLAND else
+               zoar_scroll(to_integer(unsigned(bg_scan_hcnt(9 downto 8)))) & bg_scan_hcnt(7 downto 4) & vcnt_flip(7 downto 4);
 
 -- manage background graphics rom address
 process (clock_12,clock_6) 
@@ -496,7 +584,7 @@ end process;
 process (clock_12,clock_6)
 begin
 	if rising_edge(clock_12) and clock_6 = '1' then
-		if scroll1(4) = '0' then
+		if (hwsel = HW_ZOAR and scroll1(2) = '0') or (hwsel /= HW_ZOAR and scroll1(4) = '0') then
 				bg_grphx_1 <= (others => '0');
 				bg_grphx_2 <= (others => '0');		
 				bg_grphx_3 <= (others => '0');		
@@ -517,22 +605,24 @@ begin
 		end if;
 	end if;	
 end process;
-		
+
 bg_bits <= bg_grphx_3(0) & bg_grphx_2(0) & bg_grphx_1(0) when cocktail_flip = '0' else
 			  bg_grphx_3(7) & bg_grphx_2(7) & bg_grphx_1(7);
 
 -- manage color palette address 	
-palette_addr <= cpu_addr(3 downto 0) when palette_we = '1' else
-					 '1'&bg_bits when fg_bits = "000" else	
-					 '0'&fg_bits;
+palette_addr <= "00" & cpu_addr(3 downto 0) when palette_we = '1' else
+                '0'&palette_bank&'0'&bg_bits when fg_bits = "000" and hwsel = HW_ZOAR else
+                '0'&palette_bank&'1'&fg_bits when hwsel = HW_ZOAR else
+                "001"&bg_bits when fg_bits = "000" else	
+                "000"&fg_bits;
 
 -- get palette output
 process (clock_12,clock_6) 
 begin
 	if rising_edge(clock_12) and clock_6 = '0' then
-		video_r <= not palette_do(2 downto 0);
-		video_g <= not palette_do(5 downto 3);
-		video_b <= not palette_do(7 downto 6);
+		video_r <= palette_do(2 downto 0);
+		video_g <= palette_do(5 downto 3);
+		video_b <= palette_do(7 downto 6);
 	end if;	
 end process;
 				
@@ -779,16 +869,22 @@ port map(
  q    => sprite_buffer_do
 );
 
--- color palette ram
-color_ram : entity work.gen_ram
-generic map( dWidth => 8, aWidth => 4)
+-- color palette ram/rom
+color_ram : entity work.dpram
+generic map( dWidth => 8, aWidth => 6)
 port map(
- clk  => clock_12n,
- we   => palette_we,
- addr => palette_addr,
- d    => cpu_do,
- q    => palette_do
+ clk_a  => clock_12n,
+ we_a   => palette_we,
+ addr_a => palette_addr,
+ d_a    => not cpu_do,
+ q_a    => palette_do,
+ clk_b  => dl_clk,
+ addr_b => dl_addr(5 downto 0),
+ we_b   => color_ram_we,
+ d_b    => dl_data
 );
+
+color_ram_we <= '1' when dl_wr = '1' and dl_addr(16 downto 6) = "10101000000" else '0'; -- 15000 - 1503F
 
 bg_map: entity work.dpram
 generic map( dWidth => 8, aWidth => 12)

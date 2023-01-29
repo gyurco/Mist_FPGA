@@ -1,19 +1,19 @@
 <misterromdescription>
-	<name>Burger Time</name>
+	<name>Zoar</name>
 	<region></region>
 	<homebrew>no</homebrew>
 	<bootleg>no</bootleg>
-	<version>Set 1</version>
+	<version></version>
 	<alternative></alternative>
 	<platform></platform>
 	<series></series>
 	<year>1982</year>
 	<manufacturer>Data East</manufacturer>
-	<category>Platform - Climb</category>
+	<category> </category>
 
-	<setname>btime</setname>
+	<setname>zoar</setname>
 	<parent>btime</parent>
-	<mameversion>0229</mameversion>
+	<mameversion>0220</mameversion>
 	<rbf>burgertime</rbf>
 	<about></about>
 
@@ -22,7 +22,7 @@
 	<flip>no</flip>
 
 	<players>2 (alternating)</players>
-	<joystick>4-way</joystick>
+	<joystick>8-way</joystick>
 	<special_controls></special_controls>
 	<num_buttons>1</num_buttons>
 	<button_names></button_names>
@@ -47,40 +47,52 @@
 		<dip bits="12"     name="End of Rack Bonus" ids="None,Pepper"></dip>
 	</switches>
 
-	<rom index="0" zip="btime.zip" md5="43871ee76405d33aa64b930de7ced634">
-		<!-- padding -->
-		<part repeat="0x4000"> ff </part>
+	<rom index="1"><part>2</part></rom>
+	<rom index="0" zip="zoar.zip">
+		<!-- main cpu 0x8000-0xFFFF -->
+		<part repeat="0x5000">FF</part>
+		<part name="z15.12b" crc="1f0cfdb7"/>
+		<part name="z16.13b" crc="7685999c"/>
+		<part name="z17.15b" crc="619ea867"/>
 
-		<!-- main cpu [$c000:$ffff] -->
-		<part crc="368a25b5" name="aa04.9b"/>
-		<part crc="b4ba400d" name="aa06.13b"/>
-		<part crc="8005bffa" name="aa05.10b"/>
-		<part crc="086440ad" name="aa07.15b"/>
+		<!-- audio cpu 0xE000-0xEFFF -->
+		<part name="z09.13c" crc="18d96ff1"/>
 
-		<!-- audio cpu [$e000:$efff] -->
-		<part crc="f55e5211" name="ab14.12h"/>
+		<!-- bg map 4k -->
+		<part name="z13.6b" crc="8fefa960"/>
 
-		<!-- background map -->
-		<part crc="d26bc1f3" name="ab03.6b"/>
-		<part crc="d26bc1f3" name="ab03.6b"/>
-
-		<!-- gfx2 (background) -->
-		<part crc="c7a14485" name="ab00.1b"/>
-		<part crc="25b49078" name="ab01.3b"/>
-		<part crc="b8ef56c3" name="ab02.4b"/>
+		<!-- bg tiles 3x2k (gfx2) -->
+		<part name="z10.1b" crc="aa8bcab8"/>
+		<part name="z11.3b" crc="dcdad357"/>
+		<part name="z12.4b" crc="ed317e40"/>
 		<part repeat="0x800">00</part>
 
-		<!-- gfx1 (fg/sprites) -->
-		<part crc="c4617243" name="aa12.7k"/>
-		<part crc="ac01042f" name="ab13.9k"/>
-		<part crc="854a872a" name="ab10.10k"/>
-		<part crc="d4848014" name="ab11.12k"/>
-		<part crc="8650c788" name="aa8.13k"/>
-		<part crc="8dec15e6" name="ab9.15k"/>
+		<!-- sp/fg tiles 3x8k -->
+		<part name="z00.3l" crc="fd2dcb64"/>
+		<part name="z01.5l" crc="74d3ca48"/>
+		<part name="z03.8l" crc="77b7df14"/>
+		<part name="z04.9l" crc="9be786de"/>
+		<part name="z06.12l" crc="07638c71"/>
+		<part name="z07.14l" crc="f4710f25"/>
+
+		<!-- fg tiles 3x4k -->
+		<part name="z02.6l" crc="d8c3c122"/>
+		<part name="z05.14l" crc="05dc6b09"/>
+		<part name="z08.15l" crc="9a148551"/>
+
+		<!-- palette -->
+		<part name="z20.1l" crc="a63f0a07"/>
+		<part name="z21.2l" crc="5e1e5788"/>
+		<part name="z19.7b" crc="03ee3a96"/>
+
+		<patch offset="0x550a">EA</patch>
 
 	</rom>
 
+	<rom index="2"></rom>
+	<rom index="3"></rom>
+	<rom index="4"></rom>
+
 	<remark></remark>
 
-	<mratimestamp>20210430005030</mratimestamp>
 </misterromdescription>
