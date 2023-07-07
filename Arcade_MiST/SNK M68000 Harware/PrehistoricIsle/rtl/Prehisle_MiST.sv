@@ -244,14 +244,16 @@ prehisle prehisle
 	.SDRAM_nWE    ( SDRAM_nWE  )
 );
 
-mist_video #(.COLOR_DEPTH(4),.SD_HCNT_WIDTH(10)) mist_video(
+mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1)) mist_video(
 	.clk_sys(clk_72),
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
-	.R(blankn ? r : 6'd0),
-	.G(blankn ? g : 6'd0),
-	.B(blankn ? b : 6'd0),
+	.R(r),
+	.G(g),
+	.B(b),
+	.HBlank(hb),
+	.VBlank(vb),
 	.HSync(~hs),
 	.VSync(~vs),
 	.VGA_R(VGA_R),

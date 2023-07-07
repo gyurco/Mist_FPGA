@@ -707,37 +707,6 @@ assign z80_din = z80_rom_cs ? z80_rom_data :
                  z80_latch_cs ? sound_latch :
                  z80_sound0_cs ? opl_dout : 8'hFF;
 
-always @ (posedge clk_sys) begin
-
-    if ( reset == 1 ) begin
-    end else begin
-        
-        if ( z80_wr_n == 0 ) begin 
-            
-            // 7759
-            if ( z80_upd_cs == 1 ) begin
-                upd_din <= z80_dout ;
-                upd_start_n <= 1 ;
-                // need a pulse to trigger the 7759 start
-                upd_start_flag <= 1;
-            end
-            
-            if ( upd_start_flag == 1 ) begin
-                upd_start_n <= 0 ;
-                upd_start_flag <= 0;
-            end
-            
-            if ( z80_upd_r_cs == 1 ) begin
-                upd_reset <= 1;
-            end else begin
-                upd_reset <= 0;
-            end
-
-        end        
-       
-    end
-end 
-    
 wire [7:0] opl_dout;
 wire opl_irq_n;
 
@@ -763,24 +732,21 @@ jtopl #(.OPL_TYPE(2)) opl
     .sample(opl_sample_clk)
 );
 
-reg [7:0] upd_din;
-reg upd_reset ;
-reg upd_start_n ;
-reg upd_start_flag ;
+wire upd_reset = !z80_wr_n & z80_upd_r_cs;
 
 jt7759 upd7759
 (
     .rst( reset | upd_reset ),
     .clk(clk_sys),  // Use same clock as sound CPU
     .cen(clk_upd_en),  // 640kHz
-    .stn(upd_start_n),  // STart (active low)
+    .stn(z80_wr_n | ~z80_upd_cs),  // STart (active low)
     .cs(1'b1),
     .mdn(1'b1),  // MODE: 1 for stand alone mode, 0 for slave mode
                  // see chart in page 13 of PDF
     .busyn(),
     // CPU interface
     .wrn(1'b1),  // for slave mode only, 31.7us after drqn is set
-    .din(upd_din),
+    .din(z80_dout),
     .drqn(),  // data request. 50-70us delay after mdn goes low
 
     // ROM interface
