@@ -15,8 +15,8 @@
 	<joystick>2-way</joystick>
 	<special_controls></special_controls>
 	<num_buttons>1</num_buttons>
-	<buttons names="Button1,Button2,Start1P,Start2P,CoinA,CoinB" default="A,Start,Select,R1,L1"></buttons>
-	<switches default="00">
+	<buttons names="Button1,Button2,-,-,-,Start1P,Start2P,CoinA,CoinB" default="A,Start,Select,R1,L1"></buttons>
+	<switches default="00" base=16 page_id="1" page_name="Switches">
 		<dip bits="0" name="Flip Screen" ids="Off,On"/>
 		<dip bits="1" name="Service Mode" ids="Off,On"/>
 		<dip bits="2" name="Difficulty" ids="Easy,Hard"/>

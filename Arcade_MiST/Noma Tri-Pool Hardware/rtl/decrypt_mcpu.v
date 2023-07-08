@@ -30,7 +30,7 @@ always @* begin
       data_in[4],
       addr[13] ? (~addr[2] ? ~data_in[7] : data_in[7]) : ~data_in[0]
     };
-	 default;
+    default: data_out = data_in;
   endcase
 
 end

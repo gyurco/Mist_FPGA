@@ -27,7 +27,7 @@ module Freeze (
 	output        SDRAM_CKE
 );
 
-`include "rtl\build_id.v" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"Freeze;;",
@@ -35,6 +35,7 @@ localparam CONF_STR = {
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
 	"O6,Joystick Swap,Off,On;",
+	"DIP;",
 //	"OOR,CRT H adjust,0,+1,+2,+3,+4,+5,+6,+7,-8,-7,-6,-5,-4,-3,-2,-1;",
 //   "OSV,CRT V adjust,0,+1,+2,+3,+4,+5,+6,+7,-8,-7,-6,-5,-4,-3,-2,-1;",
 //	"OC,Monochrome,Off,On;",
@@ -60,20 +61,18 @@ assign 		SDRAM_CKE = 1;
 wire [63:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
-wire [11:0] kbjoy;
-wire  [31:0] joystick_0;
-wire  [31:0] joystick_1;
+wire [31:0] joystick_0;
+wire [31:0] joystick_1;
 wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
 wire  [9:0] audio;
-wire 			hs, vs, cs;
-wire 			hb, vb;
-wire 			blankn = ~(hb | vb);
-wire [2:0] 	r, g;
-wire [1:0] 	b;
-wire 			key_strobe;
-wire 			key_pressed;
+wire        hs, vs, cs;
+wire        hb, vb;
+wire  [2:0] r, g;
+wire  [1:0] b;
+wire        key_strobe;
+wire        key_pressed;
 wire  [7:0] key_code;
 wire        ioctl_downl;
 wire  [7:0] ioctl_index;
@@ -83,18 +82,17 @@ wire  [7:0] ioctl_dout;
 
 reg reset = 1;
 reg rom_loaded = 0;
-always @(posedge clock_24) begin
+always @(posedge clock_48) begin
 	reg ioctl_downlD;
 	ioctl_downlD <= ioctl_downl;
 	if (ioctl_downlD & ~ioctl_downl) rom_loaded <= 1;
 	reset <= status[0] | buttons[1] | ~rom_loaded;
 end
 
-wire clock_24, clock_48, pll_locked;
+wire clock_48, pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
 	.c0(clock_48),//48 MHz
-	.c1(clock_24),//24 MHz
 	.locked(pll_locked)
 	);
 
@@ -110,14 +108,16 @@ data_io data_io(
 	.ioctl_dout    ( ioctl_dout   )
 );
 
-mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(9)) mist_video(
-	.clk_sys        ( clock_24         ),
+mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(9), .USE_BLANKS(1'd1)) mist_video(
+	.clk_sys        ( clock_48         ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( blankn ? r : 3'b0),
-	.G              ( blankn ? g : 3'b0),
-	.B              ( blankn ? {b[1],b} : 3'b0),	
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( {b[1],b}         ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
 	.HSync          ( hs               ),
 	.VSync          ( vs               ),
 	.VGA_R          ( VGA_R            ),
@@ -125,7 +125,7 @@ mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(9)) mist_video(
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
-	.ce_divider		 ( 0                ),
+	.ce_divider     ( 3'd7             ),
 	.rotate         ( { orientation[1], rotate } ),
 	.blend          ( blend            ),
 	.scandoubler_disable( scandoublerD ),
@@ -133,9 +133,9 @@ mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(9)) mist_video(
 	.ypbpr          ( ypbpr            ),
 	.no_csync       ( no_csync         )
 	);
-	
+
 user_io #(.STRLEN(($size(CONF_STR)>>3)))user_io(
-	.clk_sys        (clock_24       ),
+	.clk_sys        (clock_48       ),
 	.conf_str       (CONF_STR       ),
 	.SPI_CLK        (SPI_SCK        ),
 	.SPI_SS_IO      (CONF_DATA0     ),
@@ -145,7 +145,7 @@ user_io #(.STRLEN(($size(CONF_STR)>>3)))user_io(
 	.switches       (switches       ),
 	.scandoubler_disable (scandoublerD),
 	.ypbpr          (ypbpr          ),
-	.core_mod		 (core_mod       ),
+	.core_mod       (core_mod       ),
 	.no_csync       (no_csync       ),
 	.key_strobe     (key_strobe     ),
 	.key_pressed    (key_pressed    ),
@@ -156,7 +156,7 @@ user_io #(.STRLEN(($size(CONF_STR)>>3)))user_io(
 	);
 	
 dac #(.C_bits(16))dac_l(
-	.clk_i(clock_24),
+	.clk_i(clock_48),
 	.res_n_i(1),
 	.dac_i({ 1'b0, audio, 5'd0 }),
 	.dac_o(AUDIO_L)
@@ -166,8 +166,8 @@ wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE,
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 
-arcade_inputs inputs (
-	.clk         ( clock_24    ),
+arcade_inputs #(.START1(9), .START2(10), .COIN1(11), .COIN2(12)) inputs (
+	.clk         ( clock_48    ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
 	.key_code    ( key_code    ),
@@ -229,10 +229,10 @@ always @(posedge clock_48) begin
 	end
 end
 
-//wire [7:0] DSW1 =  ~status[15:8];
-//wire [7:0] DSW2 =  ~status[23:16];
+wire [7:0] DSW1 = status[23:16];
+wire [7:0] DSW2 = status[31:24];
 wire btn_A, btn_B, btn_C;
-always @* begin
+always @(posedge clock_48) begin
 	if(key_strobe) begin
 		case(key_code)
 		'h1C: btn_A        <= key_pressed; // A
@@ -245,34 +245,38 @@ end
 wire [7:0] p0, p1, p2, p3;
 wire [6:0] core_mod;
 always @* begin
+	p0 = 8'hFF;
+	p1 = 8'hFF;
+	p2 = 8'hFF;
+	p3 = 8'hFF;
 	case (core_mod)
 		7'h0: begin // freeze
-			p0 = { 2'b0, m_coin1 , 3'b0, m_two_players, m_one_player };//unknown 
-			p1 = { m_left2, m_right2, m_down2, m_up2, m_left, m_right, m_down, m_up };
+			p0 = { 2'b0, m_coin1 , 3'b0, m_two_players, m_one_player };
+			p1 = { 6'd0, m_left, m_right };
 			p2 = { 6'd0, m_fireB, m_fireA };
 			p3 = { 6'd0, m_fire2B, m_fire2A };
 		end
 		7'h1: begin // jack
 			p0 = { 1'b0, m_coin1, m_coin2 , 3'b0, m_two_players, m_one_player };
-			p1 = { m_down2, m_up2, m_right2, m_left2, m_down, m_up, m_right, m_left };
+			p1 = { m_left2, m_right2, m_down2, m_up2, m_left, m_right, m_down, m_up };
 			p2 = { 6'd0, m_fireB, m_fireA };
 			p3 = { 6'd0, m_fire2B, m_fire2A };
 		end
 		7'h2: begin // zzyzzyxx
 			p0 = { 1'b0, m_coin1, m_coin2 , 3'b0, m_two_players, m_one_player };
-			p1 = { m_down2, m_up2, m_right2, m_left2, m_down, m_up, m_right, m_left };
-			p2 = { 6'd0, m_fireB, m_fireA };
-			p3 = { 6'd0, m_fire2B, m_fire2A };
+			p1 = { 2'b00, m_down2, m_up2, 2'b00, m_down, m_up };
+			p2 = { 7'd0, m_fireA };
+			p3 = { 7'd0, m_fire2A };
 		end
 		7'h3: begin // super casino
 			p0 = { 1'b0, m_coin1, 4'b0, m_two_players, m_one_player };
-			p1 = { m_down2, m_up2, 1'b0, 1'b0, m_down, m_up, 1'b0, 1'b0 };
-			p2 = { 6'd0, m_fireB, m_fireA };
-			p3 = { 6'd0, m_fire2B, m_fire2A };
+			p1 = { m_left2, m_right2, 1'b0, 1'b0, m_left, m_right, 1'b0, 1'b0 };
+			p2 = { 7'd0, m_fireA };
+			p3 = { 7'd0, m_fire2A };
 		end
 		7'h4: begin // tri-pool
-			p0 = { 1'b0, m_coin1, m_coin2 , btn_C, btn_B, btn_A, m_two_players, m_one_player };
-			p1 = { m_down2, m_up2, m_right2, m_left2, m_down, m_up, m_right, m_left };
+			p0 = { 1'b0, m_coin1, m_coin2 , btn_C | m_fireE, btn_B | m_fireD, btn_A | m_fireC, m_two_players, m_one_player };
+			p1 = { m_left2, m_right2, m_down2, m_up2, m_left, m_right, m_down, m_up };
 			p2 = { 6'd0, m_fireB, m_fireA };
 			p3 = { 6'd0, m_fire2B, m_fire2A };
 		end
