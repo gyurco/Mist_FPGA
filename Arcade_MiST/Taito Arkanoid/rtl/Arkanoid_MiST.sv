@@ -28,7 +28,7 @@ module Arkanoid_MiST (
 
 );
 
-`include "rtl\build_id.v" 
+`include "build_id.v" 
 
 localparam CONF_STR = {
 	"Arkanoid;;",

@@ -86,7 +86,7 @@ P6_R5sum <= DMA_n + VCount;
 -- Motion object PROMs
 N6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30174-01n6.hex",
+		init_file => "./roms/30174-01n6.hex",
 		widthad_a => 10,
 		width_a => 4)
 port map(
@@ -104,7 +104,7 @@ port map(
 
 M6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30175-01m6.hex",
+		init_file => "./roms/30175-01m6.hex",
 		widthad_a => 10,
 		width_a => 4)
 port map(
@@ -122,7 +122,7 @@ port map(
 
 L6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30176-01l6.hex",
+		init_file => "./roms/30176-01l6.hex",
 		widthad_a => 10,
 		width_a => 4)
 port map(
@@ -140,7 +140,7 @@ port map(
 
 K6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30177-01k6.hex",
+		init_file => "./roms/30177-01k6.hex",
 		widthad_a => 10,
 		width_a => 4)
 port map(

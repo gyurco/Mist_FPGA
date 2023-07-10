@@ -28,7 +28,7 @@ module bagman_mist (
 
 );
 
-`include "rtl\build_id.v" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"BAGMAN;;",

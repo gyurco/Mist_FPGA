@@ -17,7 +17,7 @@ module super_breakout_mist(
 	input         CLOCK_27
 );
 
-`include "rtl\build_id.sv" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"S. Breakout;;",

@@ -68,7 +68,7 @@ Sound so (Clk,PipesPosition1,PipesPosition2,Speaker);
 
 DrawItem s6 (Clks,CounterX,CounterY,Button,R_Item_on,G_Item_on,B_Item_on,R_Item_off,G_Item_off,B_Item_off);
 
-DrawBoard dd (Clks,Reset,CounterX,CounterY,Button,Status,R_Board_on,G_Board_on,B_Board_on,R_Board_off,G_Board_off,B_Board_off);
+DrawBoard dd (Clk,Clks,Reset,CounterX,CounterY,Button,Status,R_Board_on,G_Board_on,B_Board_on,R_Board_off,G_Board_off,B_Board_off);
 
 wire RLayer0 = (R_Background | R_OnBackground_on) & ~R_OnBackground_off;
 wire GLayer0 = (G_Background | G_OnBackground_on) & ~G_OnBackground_off;

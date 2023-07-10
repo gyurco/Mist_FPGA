@@ -43,7 +43,7 @@ set_global_assignment -name FIT_ATTEMPTS_TO_SKIP 0
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 set_global_assignment -name LAST_QUARTUS_VERSION 13.1
-set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:../rtl/build_id.tcl"
+set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:build_id.tcl"
 set_global_assignment -name SMART_RECOMPILE ON
 
 # Pin & Location Assignments
@@ -131,7 +131,7 @@ set_global_assignment -name TOP_LEVEL_ENTITY IremM72_MiST
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 144
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 8
 set_global_assignment -name DEVICE_FILTER_PACKAGE TQFP
-set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE BALANCED
+set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE AREA
 set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS ON
 set_global_assignment -name ALLOW_SYNCH_CTRL_USAGE ON
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
@@ -240,8 +240,9 @@ set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION OFF
 set_global_assignment -name AUTO_SHIFT_REGISTER_RECOGNITION AUTO
 set_global_assignment -name PHYSICAL_SYNTHESIS_EFFORT EXTRA
 set_global_assignment -name VERILOG_SHOW_LMF_MAPPING_MESSAGES OFF
+set_global_assignment -name VERILOG_MACRO "NO_AUDIO_FILTER=1"
 set_global_assignment -name AUTO_RESOURCE_SHARING ON
-set_global_assignment -name SDC_FILE ../IremM72.sdc
+set_global_assignment -name SDC_FILE ../mist/IremM72.sdc
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/IremM72_MiST.sv
 set_global_assignment -name QIP_FILE ../rtl/pll_mist.qip
 set_global_assignment -name QIP_FILE ../rtl/m72.qip
@@ -253,4 +254,5 @@ set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/jt51.qip
 set_global_assignment -name SIGNALTAP_FILE output_files/cpu.stp
 set_global_assignment -name SIGNALTAP_FILE output_files/cpu2.stp
 set_global_assignment -name SIGNALTAP_FILE output_files/cpu3.stp
+set_global_assignment -name OPTIMIZE_POWER_DURING_FITTING OFF
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

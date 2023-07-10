@@ -35,7 +35,7 @@ module NINJAKUN_VIDEO
 	input  [31:0] bg_rom_data
 );
 
-`include "rtl/defs.v"
+`include "defs.v"
 
 assign VBLK = (PV>=193);
 

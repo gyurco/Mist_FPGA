@@ -27,8 +27,8 @@ module NinjaKun_MiST (
 	output        SDRAM_CKE
 );
 
-`include "rtl/build_id.v"
-`include "rtl/defs.v"
+`include "build_id.v"
+`include "defs.v"
 
 localparam CONF_STR = {
 	"NINJAKUN;;",

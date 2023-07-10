@@ -50,7 +50,7 @@ module Prehisle_MiST
 
 //`define DEBUG
 
-`include "rtl\build_id.v"
+`include "build_id.v"
 
 `define CORE_NAME "PREHISLE"
 wire [6:0] core_mod;
@@ -63,13 +63,13 @@ localparam CONF_STR = {
 	"O6,Joystick Swap,Off,On;",
 	"O7,Pause,Off,On;",
 	"O8,Service,Off,On;",
-    "O1,Video Timing,54.1Hz (PCB),59.2Hz (MAME);",
+	"O1,Video Timing,54.1Hz (PCB),59.2Hz (MAME);",
 `ifdef DEBUG
 	"O9,GFX1,On,Off;",
 	"OA,GFX2,On,Off;",
 	"OB,GFX3,On,Off;",
 	"OC,GFX4,On,Off;",
-    "OD,Flip,Off,On;",
+	"OD,Flip,Off,On;",
 `endif
 	"DIP;",
 	"T0,Reset;",

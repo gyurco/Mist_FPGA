@@ -1,5 +1,5 @@
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/custom/k082.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/custom/k083.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/custom/k501.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/custom/k502.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/custom/k503.sv
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) k082.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) k083.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) k501.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) k502.sv]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) k503.sv]

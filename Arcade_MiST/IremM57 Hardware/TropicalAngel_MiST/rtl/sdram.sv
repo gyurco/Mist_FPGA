@@ -81,26 +81,27 @@ localparam RFRSH_CYCLES = 10'd842;
 
 /*
  SDRAM state machine for 2 bank interleaved access
- 1 word burst, CL2
+ 2 word burst, CL2
 cmd issued  registered
- 0 RAS0     cas1 - data0 read burst terminated
- 1          ras0
- 2          data1 returned
- 3 CAS0     data1 returned
- 4 RAS1     cas0
- 5          ras1
- 6 CAS1     data0 returned
+ 0 RAS0     data1 retruned
+ 1          ras0 - data1 returned
+ 2 CAS0
+ 3 RAS1
+ 4          ras1
+ 5 CAS1     data0 returned
+ 6          cas1 - data0 returned if CAS1 is not write
+ 7
 */
 
 localparam STATE_RAS0      = 3'd0;   // first state in cycle
-localparam STATE_RAS1      = 3'd4;   // Second ACTIVE command after RAS0 + tRRD (15ns)
-localparam STATE_CAS0      = STATE_RAS0 + RASCAS_DELAY + 1'd1; // CAS phase - 3
-localparam STATE_CAS1      = STATE_RAS1 + RASCAS_DELAY; // CAS phase - 6
-localparam STATE_READ0     = 3'd0;// STATE_CAS0 + CAS_LATENCY + 2'd2; // 7
-localparam STATE_READ1     = 3'd3;
-localparam STATE_DS1b      = 3'd0;
-localparam STATE_READ1b    = 3'd4;
-localparam STATE_LAST      = 3'd6;
+localparam STATE_RAS1      = 3'd3;   // Second ACTIVE command after RAS0 + tRRD (15ns)
+localparam STATE_CAS0      = STATE_RAS0 + RASCAS_DELAY; // CAS phase - 2
+localparam STATE_CAS1      = STATE_RAS1 + RASCAS_DELAY; // CAS phase - 5
+localparam STATE_READ0     = STATE_CAS0 + CAS_LATENCY + 2'd2; // 6
+localparam STATE_READ1     = 3'd1;
+localparam STATE_DS1b      = STATE_CAS1 + 1'd1;
+localparam STATE_READ1b    = 3'd2;
+localparam STATE_LAST      = 3'd7;
 
 reg [2:0] t;
 

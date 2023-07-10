@@ -18,7 +18,7 @@ module canyon_bomber_mist(
 	input         CLOCK_27
 );
 
-`include "rtl\build_id.v" 
+`include "build_id.v" 
 
 localparam CONF_STR = {
 	"CANYON;;",

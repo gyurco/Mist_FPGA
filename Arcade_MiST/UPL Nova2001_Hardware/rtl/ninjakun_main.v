@@ -21,7 +21,7 @@ module ninjakun_main(
 	input  [7:0]  CPU2DT
 );
 
-`include "rtl/defs.v"
+`include "defs.v"
 
 wire	CP0IQ, CP0IQA;
 wire	CP1IQ, CP1IQA;

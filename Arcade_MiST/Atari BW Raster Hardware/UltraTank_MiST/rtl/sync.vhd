@@ -109,7 +109,7 @@ end process;
 -- This could be replaced by combinatorial logic
 P8: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30024-01p8.hex",
+		init_file => "./roms/30024-01p8.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(

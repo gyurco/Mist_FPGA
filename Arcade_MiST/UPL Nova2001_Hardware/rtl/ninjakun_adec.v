@@ -17,7 +17,7 @@ module ninjakun_adec
 	output        SYNWR1
 );
 
-`include "rtl/defs.v"
+`include "defs.v"
 
 always @(*) begin
 	CS_IN0 = (CP0AD[15:2] == 14'b1010_0000_0000_00);

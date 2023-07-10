@@ -1,5 +1,7 @@
 Test
 build_id.v
+build_id.vhd
+build_id.sv
 db
 history.db
 greybox_tmp
@@ -26,3 +28,8 @@ console_history
 *.rbf
 *.exe
 *.url
+asm.chg
+fit.chg
+map.chg
+sta.chg
+smart.log

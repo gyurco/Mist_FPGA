@@ -31,7 +31,7 @@ module IremM72_MiST(
 	output        SDRAM_CKE
 );
 
-`include "build_id.v" 
+`include "build_id.v"
 
 `define CORE_NAME "RTYPE2"
 //`define CORE_NAME "HHARRYU"
@@ -47,7 +47,7 @@ localparam CONF_STR = {
 	"O3,Rotate Controls,Off,On;",
 	"O12,Video Timings,Original,50Hz,57Hz,60Hz;",
 	"O45,Scanlines,Off,25%,50%,75%;",
-    "O6,Swap Joystick,Off,On;",
+	"O6,Swap Joystick,Off,On;",
 	"O7,Blending,Off,On;",
 	"O8,Pause,Off,On;",
 `ifdef DEBUG
@@ -55,7 +55,9 @@ localparam CONF_STR = {
 	"OA,Layer B,On,Off;",
 	"OB,Sprites,On,Off;",
 `endif
+`ifndef NO_AUDIO_FILTER
 	"OC,Audio Filters,On,Off;",
+`endif
 	"DIP;",
 	"T0,Reset;",
 	"V,v1.0.",`BUILD_DATE
@@ -73,7 +75,11 @@ wire        en_sprites = ~status[11];
 wire        video_50hz = vidmode == 1;
 wire        video_57hz = vidmode == 2;
 wire        video_60hz = vidmode == 3;
+`ifdef NO_AUDIO_FILTER
+wire        filters = 0;
+`else
 wire        filters = ~status[12];
+`endif
 wire  [1:0] orientation = {1'b0, core_mod[0]};
 reg         oneplayer = 0;
 wire [15:0] dip_sw = status[31:16];

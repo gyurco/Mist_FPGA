@@ -17,14 +17,14 @@ module MrJong(
 	input         CLOCK_27
 );
 
-`include "rtl/build_id.v" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"MrJong;;",
 	"O2,Rotate Controls,Off,On;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
-	"O6,Joystick Swap,Off,On;",	
+	"O6,Joystick Swap,Off,On;",
 	"O8,Cabinet,Cocktail,Upright;",
 	"O9,Flip,Off,On;",
 	"OA,Bonus Life,50k,30k;",

@@ -122,7 +122,7 @@ end process;
 	
 K6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/033282_k6.hex",
+		init_file => "./roms/033282_k6.hex",
 		widthad_a => 5,
 		width_a => 8)
 port map(

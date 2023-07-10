@@ -14,7 +14,7 @@ module ninjakun_sadec
 	output       CS_PAL
 );
 
-`include "rtl/defs.v"
+`include "defs.v"
 
 always @(*) begin
 	CS_PSG = ( CPADR[15: 2] == 14'b1000_0000_0000_00 );

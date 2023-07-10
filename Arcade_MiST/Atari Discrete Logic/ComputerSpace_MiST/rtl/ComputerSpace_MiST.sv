@@ -16,7 +16,7 @@ module ComputerSpace_MiST(
 	input         CLOCK_27
 	);
 
-`include "build_id.v" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"C.SPACE;;",

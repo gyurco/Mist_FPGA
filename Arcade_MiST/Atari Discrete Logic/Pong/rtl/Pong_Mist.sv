@@ -17,7 +17,7 @@ module Pong_Mist(
 	input         CLOCK_27	
 );
 
-`include "rtl\build_id.v"
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"Pong;;",

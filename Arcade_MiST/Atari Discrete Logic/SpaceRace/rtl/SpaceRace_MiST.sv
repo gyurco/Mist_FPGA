@@ -17,7 +17,7 @@ module SpaceRace_MiST(
 
 );
 
-`include "rtl\build_id.v" 
+`include "build_id.v" 
 localparam CONF_STR = {
 	"SpaceRace;;",
 //	"O2,Rotate Controls,Off,On;",

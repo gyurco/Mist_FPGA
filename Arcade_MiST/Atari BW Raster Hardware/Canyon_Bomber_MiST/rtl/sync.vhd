@@ -104,7 +104,7 @@ end process;
 -- This has been replaced here by combinatorial logic
 M2: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6400-01m2.mif",
+		init_file => "./roms/6400-01m2.mif",
 		widthad_a => 8,
 		width_a => 4)
 port map(

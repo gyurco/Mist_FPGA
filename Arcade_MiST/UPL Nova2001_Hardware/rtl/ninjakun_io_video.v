@@ -33,7 +33,7 @@ module ninjakun_io_video
 	input   [7:0] PALDAT
 );
 
-`include "rtl/defs.v"
+`include "defs.v"
 
 wire  [9:0]	FGVAD;
 wire [15:0]	FGVDT;

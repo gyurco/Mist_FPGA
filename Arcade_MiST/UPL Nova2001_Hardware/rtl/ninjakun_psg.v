@@ -19,7 +19,7 @@ module ninjakun_psg
 	output [15:0] SNDO
 );
 
-`include "rtl/defs.v"
+`include "defs.v"
 
 wire [7:0] OD0, OD1;
 assign OD = psg1cs ? OD1 : OD0;

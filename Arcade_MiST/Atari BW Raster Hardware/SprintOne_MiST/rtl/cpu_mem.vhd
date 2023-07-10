@@ -216,7 +216,7 @@ end process;
 -- Program ROMs
 A1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6290-01b1.hex",
+		init_file => "./roms/6290-01b1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -227,7 +227,7 @@ port map(
 
 C1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6291-01c1.hex",
+		init_file => "./roms/6291-01c1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -238,7 +238,7 @@ port map(
 
 D1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6442-01d1.hex",
+		init_file => "./roms/6442-01d1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -249,7 +249,7 @@ port map(
 
 E1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6443-01e1.hex",
+		init_file => "./roms/6443-01e1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -317,7 +317,7 @@ end process;
 -- E2 PROM 
 K6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6401-01e2.hex",
+		init_file => "./roms/6401-01e2.hex",
 		widthad_a => 5,
 		width_a => 8)
 port map(

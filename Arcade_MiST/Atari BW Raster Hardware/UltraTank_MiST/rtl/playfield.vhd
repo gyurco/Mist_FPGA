@@ -106,7 +106,7 @@ Char_Addr <= DMA(5 downto 0) & V4 & V2 & V1;
 -- Background character ROMs
 H6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30173-01h6.hex",
+		init_file => "./roms/30173-01h6.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(
@@ -117,7 +117,7 @@ port map(
 
 J6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30172-01j6.hex",
+		init_file => "./roms/30172-01j6.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(
@@ -209,7 +209,7 @@ J10_addr <= (not H9_out(7)) & (K9(1) nand H9_out(0)) & (K9(2) nand H9_out(1)) & 
 
 J10: entity work.sprom
 generic map(
-		init_file => "rtl/roms/30218-01j10.hex",
+		init_file => "./roms/30218-01j10.hex",
 		widthad_a => 5,
 		width_a => 8)
 port map(

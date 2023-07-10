@@ -46,7 +46,7 @@ module MCR2_MiST(
 	output        SDRAM_CKE
 );
 
-`include "rtl/build_id.v" 
+`include "build_id.v"
 
 `define CORE_NAME "SHOLLOW"
 wire [6:0] core_mod;

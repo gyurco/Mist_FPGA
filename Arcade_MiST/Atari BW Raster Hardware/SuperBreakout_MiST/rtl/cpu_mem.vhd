@@ -219,7 +219,7 @@ end process;
 -- Note that Super Breakout only uses three ROMs, there is no ROM 1
 C1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/033453_c1.hex",
+		init_file => "./roms/033453_c1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -238,7 +238,7 @@ port map(
 
 D1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/033454_d1.hex",
+		init_file => "./roms/033454_d1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -257,7 +257,7 @@ port map(
 
 E1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/033455_e1.hex",
+		init_file => "./roms/033455_e1.hex",
 		widthad_a => 11,
 		width_a => 8)
 port map(
@@ -348,7 +348,7 @@ end process;
 -- E2 PROM - Original circuit uses a 32 byte bipolar PROM in the address decoder, this could easily be replaced with combinational logic
 E2: entity work.sprom
 generic map(
-		init_file => "rtl/roms/006401_e2.hex",
+		init_file => "./roms/006401_e2.hex",
 		widthad_a => 5,
 		width_a => 8)
 port map(

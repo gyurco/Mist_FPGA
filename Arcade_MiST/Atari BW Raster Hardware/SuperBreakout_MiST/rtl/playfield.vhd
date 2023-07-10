@@ -78,7 +78,7 @@ char_addr <= display(5 downto 0) & V4 & V2 & V1;
 -- Background character ROMs
 R4: entity work.sprom
 generic map(
-		init_file => "rtl/roms/033281_r4.hex",
+		init_file => "./roms/033281_r4.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(
@@ -96,7 +96,7 @@ port map(
 
 P4: entity work.sprom
 generic map(
-		init_file => "rtl/roms/033280_p4.hex",
+		init_file => "./roms/033280_p4.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(

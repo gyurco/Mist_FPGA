@@ -1,5 +1,5 @@
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/Filters/tp84_lpf_light.v
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/Filters/tp84_lpf_medium.v
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/Filters/tp84_lpf_heavy.v
-set_global_assignment -name VERILOG_FILE rtl/Filters/audio_iir_filter.v
-set_global_assignment -name VERILOG_FILE rtl/Filters/jt49_dcrm2.v
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) Filters/tp84_lpf_light.v]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) Filters/tp84_lpf_medium.v]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) Filters/tp84_lpf_heavy.v]
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) Filters/audio_iir_filter.v]
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) Filters/jt49_dcrm2.v]

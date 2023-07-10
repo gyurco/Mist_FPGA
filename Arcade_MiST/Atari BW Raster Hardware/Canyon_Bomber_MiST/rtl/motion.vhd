@@ -216,7 +216,7 @@ VidROMAdr <= Display(0)
 --Motion object ROMs
 M5: entity work.sprom
 generic map(
-		init_file => "rtl/roms/9506-01.m5.mif",
+		init_file => "./roms/9506-01.m5.mif",
 		widthad_a => 8,
 		width_a => 4)
 port map(

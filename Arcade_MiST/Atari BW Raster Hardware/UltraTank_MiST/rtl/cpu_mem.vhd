@@ -192,7 +192,7 @@ Phi2_O <= PHI2;
 -- Program ROMs
 N1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/030180n1.hex",
+		init_file => "./roms/030180n1.hex",
 		widthad_a => 11,
 		width_a => 4)
 port map(
@@ -203,7 +203,7 @@ port map(
 
 K1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/030181k1.hex",
+		init_file => "./roms/030181k1.hex",
 		widthad_a => 11,
 		width_a => 4)
 port map(
@@ -214,7 +214,7 @@ port map(
 		
 M1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/030182m1.hex",
+		init_file => "./roms/030182m1.hex",
 		widthad_a => 11,
 		width_a => 4)
 port map(
@@ -225,7 +225,7 @@ port map(
 
 L1: entity work.sprom
 generic map(
-		init_file => "rtl/roms/030183l1.hex",
+		init_file => "./roms/030183l1.hex",
 		widthad_a => 11,
 		width_a => 4)
 port map(

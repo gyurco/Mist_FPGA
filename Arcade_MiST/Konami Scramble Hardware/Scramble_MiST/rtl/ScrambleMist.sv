@@ -52,7 +52,7 @@ module ScrambleMist
 	output        SDRAM_CKE
 );
 
-`include "rtl\build_id.v"
+`include "build_id.v"
 
 `define CORE_NAME "SCRAMBLE"
 wire [6:0] core_mod;

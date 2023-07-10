@@ -16,7 +16,7 @@ module sprint1_mist(
 	input         CLOCK_27
 );
 
-`include "rtl\build_id.sv" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"Sprint1;;",

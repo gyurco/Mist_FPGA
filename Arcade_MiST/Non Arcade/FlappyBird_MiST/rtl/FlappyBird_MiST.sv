@@ -16,39 +16,92 @@ module FlappyBird_MiST(
 	input         CLOCK_27
 );
 
-`include "rtl\build_id.v" 
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"FlappyBird;;",
 	"V,v1.00.",`BUILD_DATE
 };
 
-wire [31:0] status;
-wire  [1:0] buttons;
-wire  [1:0] switches;
-wire  [9:0] kbjoy;
-wire  [7:0] joy0, joy1;
-wire        scandoubler_disable;
-wire        ypbpr;
-wire        ps2_kbd_clk, ps2_kbd_data;
-wire  [7:0] audio;
-wire			r, g, b;
-wire hs, vs;
 assign AUDIO_R = AUDIO_L;
 assign LED = 1'b1;
 
-wire clk_sys, clk_pix;
+wire clk_sys;
 pll pll
 (
 	.inclk0(CLOCK_27),
-	.c0(clk_sys),
-	.c1(clk_pix)
+	.c0(clk_sys)
 );
+// ARM connection
+wire [63:0] status;
+wire  [1:0] buttons;
+wire  [1:0] switches;
+wire [31:0] joystick_0;
+wire [31:0] joystick_1;
+wire        scandoublerD;
+wire        ypbpr;
+wire        no_csync;
+wire        key_strobe;
+wire        key_pressed;
+wire  [7:0] key_code;
+wire  [6:0] core_mod;
+
+user_io #(
+	.STRLEN($size(CONF_STR)>>3))
+user_io(
+	.clk_sys        (clk_sys        ),
+	.conf_str       (CONF_STR       ),
+	.SPI_CLK        (SPI_SCK        ),
+	.SPI_SS_IO      (CONF_DATA0     ),
+	.SPI_MISO       (SPI_DO         ),
+	.SPI_MOSI       (SPI_DI         ),
+	.buttons        (buttons        ),
+	.switches       (switches       ),
+	.scandoubler_disable (scandoublerD ),
+	.ypbpr          (ypbpr          ),
+	.no_csync       (no_csync       ),
+	.core_mod       (core_mod       ),
+	.key_strobe     (key_strobe     ),
+	.key_pressed    (key_pressed    ),
+	.key_code       (key_code       ),
+	.joystick_0     (joystick_0     ),
+	.joystick_1     (joystick_1     ),
+	.status         (status         )
+	);
+
+// Common inputs
+wire m_up1, m_down1, m_left1, m_right1, m_up1B, m_down1B, m_left1B, m_right1B;
+wire m_up2, m_down2, m_left2, m_right2, m_up2B, m_down2B, m_left2B, m_right2B;
+wire m_up3, m_down3, m_left3, m_right3, m_up3B, m_down3B, m_left3B, m_right3B;
+wire m_up4, m_down4, m_left4, m_right4, m_up4B, m_down4B, m_left4B, m_right4B;
+wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
+wire [11:0] m_fire1, m_fire2, m_fire3, m_fire4;
+
+arcade_inputs inputs (
+	.clk         ( clk_sys     ),
+	.key_strobe  ( key_strobe  ),
+	.key_pressed ( key_pressed ),
+	.key_code    ( key_code    ),
+	.joystick_0  ( joystick_0  ),
+	.joystick_1  ( joystick_1  ),
+	.rotate      ( 1'b0        ),
+	.orientation ( 2'b00       ),
+	.joyswap     ( 1'b0        ),
+	.oneplayer   ( 1'b1        ),
+	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),
+	.player1     ( {m_up1B, m_down1B, m_left1B, m_right1B, m_fire1, m_up1, m_down1, m_left1, m_right1} ),
+	.player2     ( {m_up2B, m_down2B, m_left2B, m_right2B, m_fire2, m_up2, m_down2, m_left2, m_right2} ),
+	.player3     ( {m_up3B, m_down3B, m_left3B, m_right3B, m_fire3, m_up3, m_down3, m_left3, m_right3} ),
+	.player4     ( {m_up4B, m_down4B, m_left4B, m_right4B, m_fire4, m_up4, m_down4, m_left4, m_right4} )
+);
+
+wire        r, g, b;
+wire        hs, vs;
 
 TopModule TopModule(
 	.Clk(clk_sys),
-	.Button(~(joy0[4] | joy1[4] | kbjoy[4])),
-	.Reset(~(kbjoy[7] | joy0[5] | joy1[5])), 
+	.Button(~m_fire1[0]),
+	.Reset(~m_fire1[1]),
 	.vga_h_sync(hs),
 	.vga_v_sync(vs),
 	.vga_R(r), 
@@ -57,17 +110,14 @@ TopModule TopModule(
 	.Speaker(AUDIO_L)
 	);
 
-video_mixer #(.LINE_LENGTH(480), .HALF_DEPTH(1)) video_mixer
-(
+mist_video #(.COLOR_DEPTH(1),.SD_HCNT_WIDTH(11)) mist_video(
 	.clk_sys(clk_sys),
-	.ce_pix(clk_pix),
-	.ce_pix_actual(clk_pix),
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
-	.R({r,r,r}),
-	.G({g,g,g}),
-	.B({b,b,b}),
+	.R(r),
+	.G(g),
+	.B(b),
 	.HSync(hs),
 	.VSync(vs),
 	.VGA_R(VGA_R),
@@ -75,41 +125,13 @@ video_mixer #(.LINE_LENGTH(480), .HALF_DEPTH(1)) video_mixer
 	.VGA_B(VGA_B),
 	.VGA_VS(VGA_VS),
 	.VGA_HS(VGA_HS),
-	.scandoubler_disable(1'b1),//scandoubler_disable),
-	.scanlines(scandoubler_disable ? 2'b00 : {status[4:3] == 3, status[4:3] == 2}),
-	.hq2x(status[4:3]==1),
-	.ypbpr_full(1),
-	.line_start(0),
-	.mono(1)
-);
-
-mist_io #(.STRLEN(($size(CONF_STR)>>3))) mist_io
-(
-	.clk_sys        (clk_sys   	     ),
-	.conf_str       (CONF_STR       ),
-	.SPI_SCK        (SPI_SCK        ),
-	.CONF_DATA0     (CONF_DATA0     ),
-	.SPI_SS2			 (SPI_SS2        ),
-	.SPI_DO         (SPI_DO         ),
-	.SPI_DI         (SPI_DI         ),
-	.buttons        (buttons        ),
-	.switches   	 (switches       ),
-	.scandoubler_disable(scandoubler_disable),
-	.ypbpr          (ypbpr          ),
-	.ps2_kbd_clk    (ps2_kbd_clk    ),
-	.ps2_kbd_data   (ps2_kbd_data   ),
-	.joystick_0   	 (joy0     ),
-	.joystick_1     (joy1     ),
-	.status         (status         )
-);
-
-keyboard keyboard(
-	.clk(clk_sys),
-	.reset(),
-	.ps2_kbd_clk(ps2_kbd_clk),
-	.ps2_kbd_data(ps2_kbd_data),
-	.joystick(kbjoy)
+	.no_csync(no_csync),
+	.rotate(2'b00),
+	.ce_divider(3'd1),
+	.blend(1'b0),
+	.scandoubler_disable(1'b1),
+	.scanlines(2'b00),
+	.ypbpr(ypbpr)
 	);
-
 
 endmodule

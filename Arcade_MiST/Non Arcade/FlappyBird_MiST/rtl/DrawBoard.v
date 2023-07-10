@@ -18,7 +18,7 @@
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
-module DrawBoard(input [24:0] Clks,Reset,CounterX,CounterY,Button,Status,output reg R_Board_on,G_Board_on,B_Board_on,R_Board_off,G_Board_off,B_Board_off);
+module DrawBoard(input Clk, input [24:0] Clks,Reset,CounterX,CounterY,Button,Status,output reg R_Board_on,G_Board_on,B_Board_on,R_Board_off,G_Board_off,B_Board_off);
 
 reg [15:0] ScoreBoardPositionX = 185;
 reg [15:0] ScoreBoardPositionY = 120;
@@ -51,7 +51,7 @@ reg [15:0] Name3PositionY = 290;
 
 reg ScoreBoardBlack,ScoreText,BestText,ScoreBoardWhite,BestBlackUnit,BestBlackTen,BestWhiteUnit,BestWhiteTen,LogoBlack,LogoWhite,LogoYellow,LogoGreen,Name0,Name1,Name2,Name3;
 
-always @ (CounterX or CounterY)
+always @(*)
 begin
 
 LogoWhite <= (CounterX>=LogoPositionX+0*3) && (CounterX<=LogoPositionX+22*3) && (CounterY>=LogoPositionY+0*3) && (CounterY<=LogoPositionY+1*3)
@@ -709,40 +709,33 @@ Name3 <= (CounterX>=Name3PositionX+0*2) && (CounterX<=Name3PositionX+5*2) && (Co
 ||          (CounterX>=Name3PositionX+111*2) && (CounterX<=Name3PositionX+112*2) && (CounterY>=Name3PositionY+0*2) && (CounterY<=Name3PositionY+5*2)
 ||          (CounterX>=Name3PositionX+108*2) && (CounterX<=Name3PositionX+111*2) && (CounterY>=Name3PositionY+2*2) && (CounterY<=Name3PositionY+3*2);   //  H
 
+end
 
+always @(posedge Clk)
+begin
 
+	if (Status == 0) begin
+		R_Board_on <= ScoreBoardWhite | ScoreText | BestText | BestWhiteUnit | BestWhiteTen;
+		G_Board_on <= ScoreBoardWhite | BestWhiteUnit | BestWhiteTen;
+		B_Board_on <= ScoreBoardWhite | BestWhiteUnit | BestWhiteTen;
 
-
-
-
-
-
-
-
-
-				if (Status == 0) begin
-				R_Board_on = ScoreBoardWhite | ScoreText | BestText | BestWhiteUnit | BestWhiteTen;
-				G_Board_on = ScoreBoardWhite | BestWhiteUnit | BestWhiteTen;
-				B_Board_on = ScoreBoardWhite | BestWhiteUnit | BestWhiteTen;
-
-				R_Board_off = ScoreBoardBlack | BestBlackUnit | BestBlackTen;
-				G_Board_off = ScoreBoardBlack | ScoreText | BestText | BestBlackUnit | BestBlackTen;
-				B_Board_off = ScoreBoardBlack | ScoreText | BestText | BestBlackUnit | BestBlackTen;
-				end
+		R_Board_off <= ScoreBoardBlack | BestBlackUnit | BestBlackTen;
+		G_Board_off <= ScoreBoardBlack | ScoreText | BestText | BestBlackUnit | BestBlackTen;
+		B_Board_off <= ScoreBoardBlack | ScoreText | BestText | BestBlackUnit | BestBlackTen;
+	end
 				
-				if (!Button && Start == 0) Start <= 1;
-				if (!Reset) Start <= 0;
+	if (!Button && Start == 0) Start <= 1;
+	if (!Reset) Start <= 0;
 				
-				if (Start == 0) begin
-				R_Board_on = LogoWhite | LogoYellow;
-				G_Board_on = LogoWhite | LogoYellow | LogoGreen;
-				B_Board_on = LogoWhite;
+	if (Start == 0) begin
+		R_Board_on <= LogoWhite | LogoYellow;
+		G_Board_on <= LogoWhite | LogoYellow | LogoGreen;
+		B_Board_on <= LogoWhite;
 
-				R_Board_off = LogoBlack | LogoGreen | Name0 | Name1 | Name2 | Name3;
-				G_Board_off = LogoBlack| Name0 | Name1 | Name2  | Name3;
-				B_Board_off = LogoBlack | LogoYellow | LogoGreen | Name0 | Name1 | Name2  | Name3;
-				end
-				
+		R_Board_off <= LogoBlack | LogoGreen | Name0 | Name1 | Name2 | Name3;
+		G_Board_off <= LogoBlack| Name0 | Name1 | Name2  | Name3;
+		B_Board_off <= LogoBlack | LogoYellow | LogoGreen | Name0 | Name1 | Name2  | Name3;
+	end
 				 
 end
 endmodule

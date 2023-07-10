@@ -124,7 +124,7 @@ end process;
 -- Motion object PROMs - These contain the car images for all 32 possible orientations
 J6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6399-01j6.hex",
+		init_file => "./roms/6399-01j6.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(
@@ -142,7 +142,7 @@ port map(
 
 K6: entity work.sprom
 generic map(
-		init_file => "rtl/roms/6398-01k6.hex",
+		init_file => "./roms/6398-01k6.hex",
 		widthad_a => 9,
 		width_a => 4)
 port map(

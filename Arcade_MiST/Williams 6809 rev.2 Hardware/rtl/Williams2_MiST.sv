@@ -32,7 +32,7 @@ module Williams2_MiST(
 	output        SDRAM_CKE
 );
 
-`include "rtl/build_id.v"
+`include "build_id.v"
 
 `define CORE_NAME "TSHOOT"
 //`define CORE_NAME "JOUST2"

@@ -17,7 +17,7 @@ module MissileCommand_MiST(
 	output        SDRAM_CKE
 );
 
-`include "rtl/build_id.v"
+`include "build_id.v"
 
 localparam CONF_STR = {
 	"MISSILE;;",
