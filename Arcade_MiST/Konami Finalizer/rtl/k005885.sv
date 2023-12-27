@@ -86,21 +86,23 @@ module k005885
 	input   [1:0] BTLG, 
 	//Extra data outputs for graphics ROMs
 	output reg    ATR4,     //Tilemap attribute bit 4
-	output reg    ATR5      //Tilemap attribute bit 5
+	output reg    ATR5,     //Tilemap attribute bit 5
 
 	`ifdef MISTER_HISCORE
 	//MiSTer high score system I/O (to be used only with Iron Horse)
-		,
 		input  [11:0] hs_address,
 		input   [7:0] hs_data_in,
 		output  [7:0] hs_data_out,
 		input         hs_write_enable,
 		input         hs_access_read,
-		input         hs_access_write
+		input         hs_access_write,
 	`endif
+	output flipped
 );
 
 //------------------------------------------------------- Signal outputs -------------------------------------------------------//
+
+assign flipped = flipscreen;
 
 //Reset line passthrough
 assign NRES = NEXR;
@@ -221,29 +223,29 @@ always_ff @(posedge CK49) begin
 	if(cen_6m) begin
 		case(h_cnt)
 			//HBlank ends two lines earlier than normal on bootleg Jackal PCBs
-			10: begin
+			11: begin
 				if(BTLG == 2'b01)
 					hblank <= 0;
 				h_cnt <= h_cnt + 9'd1;
 			end
-			12: begin
+			13: begin
 				if(BTLG != 2'b01)
 					hblank <= 0;
 				h_cnt <= h_cnt + 9'd1;
 			end
 			//Shift the start of HBlank two lines earlier when bootleg Jackal ROMs are loaded
-			250: begin
+			251: begin
 				if(BTLG == 2'b01 && !tile_ctrl[2])
 					hblank <= 1;
 				h_cnt <= h_cnt + 9'd1;
 			end
-			252: begin
+			253: begin
 				if(BTLG != 2'b01 && !tile_ctrl[2])
 					hblank <= 1;
 				h_cnt <= h_cnt + 9'd1;
 			end
 			//Shift the start of HBlank 40 lines later when using the wider 280x224 video mode 
-			292: begin
+			293: begin
 				if(tile_ctrl[2])
 					hblank <= 1;
 				h_cnt <= h_cnt + 9'd1;

@@ -7,14 +7,14 @@ module ninjakun_adec
 	input  [15:0] CP1AD,
 	input         CP1WR,
 
-	output        CS_IN0,
-	output        CS_IN1,
+	output reg    CS_IN0,
+	output reg    CS_IN1,
 
-	output        CS_SH0,
-	output        CS_SH1,
+	output reg    CS_SH0,
+	output reg    CS_SH1,
 
-	output        SYNWR0,
-	output        SYNWR1
+	output reg    SYNWR0,
+	output reg    SYNWR1
 );
 
 `include "defs.v"

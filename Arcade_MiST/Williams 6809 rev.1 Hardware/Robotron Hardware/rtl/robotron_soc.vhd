@@ -74,6 +74,8 @@ port (
 	vgaBlue          : out   std_logic_vector(1 downto 0);
 	Hsync            : out   std_logic;
 	Vsync            : out   std_logic;
+	Hblank           : out   std_logic;
+	Vblank           : out   std_logic;
 
 	-- Audio
 	audio_out        : out   std_logic_vector(7 downto 0);
@@ -234,6 +236,8 @@ port map (
 	vgaBlue          => vgaBlue,
 	Hsync            => Hsync,
 	Vsync            => Vsync,
+	Hblank           => Hblank,
+	Vblank           => Vblank,
 
 	-- 12-pin connectors
 	JA               => JA,

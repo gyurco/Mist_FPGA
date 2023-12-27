@@ -1,22 +1,48 @@
 import m72_pkg::*;
 
-module IremM72_MiST(
+module IremM72_MiST
+(
+	input         CLOCK_27,
+`ifdef USE_CLOCK_50
+	input         CLOCK_50,
+`endif
+
 	output        LED,
-	output  [5:0] VGA_R,
-	output  [5:0] VGA_G,
-	output  [5:0] VGA_B,
+	output [VGA_BITS-1:0] VGA_R,
+	output [VGA_BITS-1:0] VGA_G,
+	output [VGA_BITS-1:0] VGA_B,
 	output        VGA_HS,
 	output        VGA_VS,
-	output        AUDIO_L,
-	output        AUDIO_R,
+
+`ifdef USE_HDMI
+	output        HDMI_RST,
+	output  [7:0] HDMI_R,
+	output  [7:0] HDMI_G,
+	output  [7:0] HDMI_B,
+	output        HDMI_HS,
+	output        HDMI_VS,
+	output        HDMI_PCLK,
+	output        HDMI_DE,
+	input         HDMI_INT,
+	inout         HDMI_SDA,
+	inout         HDMI_SCL,
+`endif
+
 	input         SPI_SCK,
 	inout         SPI_DO,
 	input         SPI_DI,
-	input         SPI_SS2,
-	input         SPI_SS3,
+	input         SPI_SS2,    // data_io
+	input         SPI_SS3,    // OSD
+	input         CONF_DATA0, // SPI_SS for user_io
+
+`ifdef USE_QSPI
+	input         QSCK,
+	input         QCSn,
+	inout   [3:0] QDAT,
+`endif
+`ifndef NO_DIRECT_UPLOAD
 	input         SPI_SS4,
-	input         CONF_DATA0,
-	input         CLOCK_27,
+`endif
 
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
@@ -28,8 +54,95 @@ module IremM72_MiST(
 	output        SDRAM_nCS,
 	output  [1:0] SDRAM_BA,
 	output        SDRAM_CLK,
-	output        SDRAM_CKE
+	output        SDRAM_CKE,
+
+`ifdef DUAL_SDRAM
+	output [12:0] SDRAM2_A,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_DQML,
+	output        SDRAM2_DQMH,
+	output        SDRAM2_nWE,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nCS,
+	output  [1:0] SDRAM2_BA,
+	output        SDRAM2_CLK,
+	output        SDRAM2_CKE,
+`endif
+
+	output        AUDIO_L,
+	output        AUDIO_R,
+`ifdef I2S_AUDIO
+	output        I2S_BCK,
+	output        I2S_LRCK,
+	output        I2S_DATA,
+`endif
+`ifdef I2S_AUDIO_HDMI
+	output        HDMI_MCLK,
+	output        HDMI_BCK,
+	output        HDMI_LRCK,
+	output        HDMI_SDATA,
+`endif
+`ifdef SPDIF_AUDIO
+	output        SPDIF,
+`endif
+`ifdef USE_AUDIO_IN
+	input         AUDIO_IN,
+`endif
+	input         UART_RX,
+	output        UART_TX
+
 );
+
+`ifdef NO_DIRECT_UPLOAD
+localparam bit DIRECT_UPLOAD = 0;
+wire SPI_SS4 = 1;
+`else
+localparam bit DIRECT_UPLOAD = 1;
+`endif
+
+`ifdef USE_QSPI
+localparam bit QSPI = 1;
+assign QDAT = 4'hZ;
+`else
+localparam bit QSPI = 0;
+`endif
+
+`ifdef VGA_8BIT
+localparam VGA_BITS = 8;
+`else
+localparam VGA_BITS = 6;
+`endif
+
+`ifdef USE_HDMI
+localparam bit HDMI = 1;
+assign HDMI_RST = 1'b1;
+`else
+localparam bit HDMI = 0;
+`endif
+
+`ifdef BIG_OSD
+localparam bit BIG_OSD = 1;
+`define SEP "-;",
+`else
+localparam bit BIG_OSD = 0;
+`define SEP
+`endif
+
+// remove this if the 2nd chip is actually used
+`ifdef DUAL_SDRAM
+assign SDRAM2_A = 13'hZZZZ;
+assign SDRAM2_BA = 0;
+assign SDRAM2_DQML = 0;
+assign SDRAM2_DQMH = 0;
+assign SDRAM2_CKE = 0;
+assign SDRAM2_CLK = 0;
+assign SDRAM2_nCS = 1;
+assign SDRAM2_DQ = 16'hZZZZ;
+assign SDRAM2_nCAS = 1;
+assign SDRAM2_nRAS = 1;
+assign SDRAM2_nWE = 1;
+`endif
 
 `include "build_id.v"
 
@@ -58,7 +171,9 @@ localparam CONF_STR = {
 `ifndef NO_AUDIO_FILTER
 	"OC,Audio Filters,On,Off;",
 `endif
+	`SEP
 	"DIP;",
+	`SEP
 	"T0,Reset;",
 	"V,v1.0.",`BUILD_DATE
 };
@@ -109,9 +224,21 @@ wire        key_pressed;
 wire  [7:0] key_code;
 wire        key_strobe;
 
+`ifdef USE_HDMI
+wire        i2c_start;
+wire        i2c_read;
+wire  [6:0] i2c_addr;
+wire  [7:0] i2c_subaddr;
+wire  [7:0] i2c_dout;
+wire  [7:0] i2c_din;
+wire        i2c_ack;
+wire        i2c_end;
+`endif
+
 user_io #(
 	.STRLEN(($size(CONF_STR)>>3)),
-	.ROM_DIRECT_UPLOAD(1'b1))
+	.ROM_DIRECT_UPLOAD(DIRECT_UPLOAD),
+	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
 user_io(
 	.clk_sys        (CLK_32M        ),
 	.conf_str       (CONF_STR       ),
@@ -124,6 +251,16 @@ user_io(
 	.scandoubler_disable (scandoublerD	  ),
 	.ypbpr          (ypbpr          ),
 	.no_csync       (no_csync       ),
+`ifdef USE_HDMI
+	.i2c_start      (i2c_start      ),
+	.i2c_read       (i2c_read       ),
+	.i2c_addr       (i2c_addr       ),
+	.i2c_subaddr    (i2c_subaddr    ),
+	.i2c_dout       (i2c_dout       ),
+	.i2c_din        (i2c_din        ),
+	.i2c_ack        (i2c_ack        ),
+	.i2c_end        (i2c_end        ),
+`endif
 	.core_mod       (core_mod       ),
 	.key_strobe     (key_strobe     ),
 	.key_pressed    (key_pressed    ),
@@ -139,7 +276,7 @@ wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
 
-data_io #(.ROM_DIRECT_UPLOAD(1'b1)) data_io(
+data_io #(.ROM_DIRECT_UPLOAD(DIRECT_UPLOAD)) data_io(
 	.clk_sys       ( CLK_32M      ),
 	.SPI_SCK       ( SPI_SCK      ),
 	.SPI_SS2       ( SPI_SS2      ),
@@ -405,14 +542,14 @@ m72 m72(
     .video_60hz(video_60hz)
 );
 
-mist_video #(.COLOR_DEPTH(6), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1)) mist_video(
+mist_video #(.COLOR_DEPTH(8), .OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1)) mist_video(
 	.clk_sys        ( CLK_32M          ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( R[7:2]           ),
-	.G              ( G[7:2]           ),
-	.B              ( B[7:2]           ),
+	.R              ( R                ),
+	.G              ( G                ),
+	.B              ( B                ),
 	.HBlank         ( HBlank           ),
 	.VBlank         ( VBlank           ),
 	.HSync          ( HSync            ),
@@ -423,13 +560,62 @@ mist_video #(.COLOR_DEPTH(6), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1)) mist_video(
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
 	.rotate         ( { orientation[1], rotate } ),
-	.ce_divider     ( 1'b1             ),
+	.ce_divider     ( 3'd1             ),
 	.scandoubler_disable( scandoublerD ),
 	.scanlines      ( scanlines        ),
 	.blend          ( blend            ),
 	.ypbpr          ( ypbpr            ),
 	.no_csync       ( no_csync         )
 	);
+
+`ifdef USE_HDMI
+
+i2c_master #(32_000_000) i2c_master (
+	.CLK         (CLK_32M),
+
+	.I2C_START   (i2c_start),
+	.I2C_READ    (i2c_read),
+	.I2C_ADDR    (i2c_addr),
+	.I2C_SUBADDR (i2c_subaddr),
+	.I2C_WDATA   (i2c_dout),
+	.I2C_RDATA   (i2c_din),
+	.I2C_END     (i2c_end),
+	.I2C_ACK     (i2c_ack),
+
+	//I2C bus
+	.I2C_SCL     (HDMI_SCL),
+ 	.I2C_SDA     (HDMI_SDA)
+);
+
+mist_video #(.COLOR_DEPTH(8), .OUT_COLOR_DEPTH(8), .BIG_OSD(BIG_OSD), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1), .VIDEO_CLEANER(1'b1)) hdmi_video(
+	.clk_sys        ( CLK_32M          ),
+	.SPI_SCK        ( SPI_SCK          ),
+	.SPI_SS3        ( SPI_SS3          ),
+	.SPI_DI         ( SPI_DI           ),
+	.R              ( R                ),
+	.G              ( G                ),
+	.B              ( B                ),
+	.HBlank         ( HBlank           ),
+	.VBlank         ( VBlank           ),
+	.HSync          ( HSync            ),
+	.VSync          ( VSync            ),
+	.VGA_R          ( HDMI_R           ),
+	.VGA_G          ( HDMI_G           ),
+	.VGA_B          ( HDMI_B           ),
+	.VGA_VS         ( HDMI_VS          ),
+	.VGA_HS         ( HDMI_HS          ),
+	.VGA_DE         ( HDMI_DE          ),
+	.rotate         ( { orientation[1], rotate } ),
+	.ce_divider     ( 3'd1             ),
+	.scandoubler_disable( 1'b0         ),
+	.scanlines      ( scanlines        ),
+	.blend          ( blend            ),
+	.ypbpr          ( 1'b0             ),
+	.no_csync       ( 1'b1             )
+	);
+
+	assign HDMI_PCLK = CLK_32M;
+`endif
 
 dac #(
 	.C_bits(16))
@@ -448,7 +634,38 @@ dacr(
 	.dac_i({~ch_right[15], ch_right[14:0]}),
 	.dac_o(AUDIO_R)
 	);
-	
+
+`ifdef I2S_AUDIO
+i2s i2s (
+	.reset(1'b0),
+	.clk(CLK_32M),
+	.clk_rate(32'd32_000_000),
+	.sclk(I2S_BCK),
+	.lrclk(I2S_LRCK),
+	.sdata(I2S_DATA),
+	.left_chan({{2{ch_left[15]}}, ch_left[14:1]}),
+	.right_chan({{2{ch_right[15]}}, ch_right[14:1]})
+);
+`ifdef I2S_AUDIO_HDMI
+assign HDMI_MCLK = 0;
+always @(posedge CLK_32M) begin
+	HDMI_BCK <= I2S_BCK;
+	HDMI_LRCK <= I2S_LRCK;
+	HDMI_SDATA <= I2S_DATA;
+end
+`endif
+`endif
+
+`ifdef SPDIF_AUDIO
+spdif spdif (
+	.rst_i(1'b0),
+	.clk_i(CLK_32M),
+	.clk_rate_i(32'd32_000_000),
+	.spdif_o(SPDIF),
+	.sample_i({{2{ch_right[15]}}, ch_right[14:1], {2{ch_left[15]}}, ch_left[14:1]})
+);
+`endif
+
 wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;

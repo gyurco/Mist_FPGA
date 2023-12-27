@@ -1,17 +1,24 @@
 TARGET=mist
-QUARTUS_DIR=$(HOME)/altera/13.1/quartus/bin
+#QUARTUS_DIR=$(HOME)/altera/13.1/quartus/bin
 
 ### project ###
 #PROJECT=
 PROJECT_OUTPUT=$(TARGET)/output_files
 
 ### programs ###
-MAP=$(QUARTUS_DIR)/quartus_map
-FIT=$(QUARTUS_DIR)/quartus_fit
-ASM=$(QUARTUS_DIR)/quartus_asm
-PGM=$(QUARTUS_DIR)/quartus_pgm
-STA=$(QUARTUS_DIR)/quartus_sta
-QSH=$(QUARTUS_DIR)/quartus_sh
+#MAP=$(QUARTUS_DIR)/quartus_map
+#FIT=$(QUARTUS_DIR)/quartus_fit
+#ASM=$(QUARTUS_DIR)/quartus_asm
+#PGM=$(QUARTUS_DIR)/quartus_pgm
+#STA=$(QUARTUS_DIR)/quartus_sta
+#QSH=$(QUARTUS_DIR)/quartus_sh
+
+MAP=quartus_map
+FIT=quartus_fit
+ASM=quartus_asm
+PGM=quartus_pgm
+STA=quartus_sta
+QSH=quartus_sh
 
 ASSIGNMENT_FILES = $(TARGET)/$(PROJECT).qpf $(TARGET)/$(PROJECT).qsf
 

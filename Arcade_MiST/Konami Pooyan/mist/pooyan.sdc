@@ -55,8 +55,8 @@ create_clock -name {SPI_SCK}  -period 41.666 -waveform { 20.8 41.666 } [get_port
 
 set sys_clk   "pll|altpll_component|auto_generated|pll1|clk[1]"
 set sdram_clk "pll|altpll_component|auto_generated|pll1|clk[0]"
-set snd_clk   "pll|altpll_component|auto_generated|pll1|clk[2]"
-set vid_clk   "pll|altpll_component|auto_generated|pll1|clk[0]"
+set vid_clk   "pll|altpll_component|auto_generated|pll1|clk[2]"
+set snd_clk   "pll_aud|altpll_component|auto_generated|pll1|clk[0]"
 #**************************************************************
 # Create Generated Clock
 #**************************************************************
@@ -105,7 +105,7 @@ set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM
 
 set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[*]}]
 # audio-main cpu clocks are asynchronous
-set_clock_groups -asynchronous -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[3]}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[2]}]
+set_clock_groups -asynchronous -group [get_clocks {pll_aud|altpll_component|auto_generated|pll1|clk[0]}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[2]}]
 
 #**************************************************************
 # Set False Path

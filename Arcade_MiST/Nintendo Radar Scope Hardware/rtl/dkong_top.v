@@ -44,7 +44,7 @@ module dkong_top
 	output [3:0]O_VGA_R,
 	output [3:0]O_VGA_G,
 	output [3:0]O_VGA_B,
-	output O_H_BLANK,
+	output reg O_H_BLANK,
 	output O_V_BLANK,
 	output O_VGA_H_SYNCn,
 	output O_VGA_V_SYNCn,
@@ -67,7 +67,11 @@ module dkong_top
 
 );
 
-assign O_H_BLANK = ~W_H_BLANKn;
+always@(posedge I_CLK_24576M) begin
+	if (W_CLK_12288M_EN && W_H_CNT[3:0] == 4'b1111) O_H_BLANK <= ~W_H_BLANKn;
+end
+
+//assign O_H_BLANK = ~W_H_BLANKn;
 assign O_V_BLANK = ~W_V_BLANKn;
 
 wire   W_CLK_24576M = I_CLK_24576M;

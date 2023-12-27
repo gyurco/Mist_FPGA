@@ -199,6 +199,10 @@ begin
           prio := '0';
         end if;
 
+        if (hwsel = HW_KUNGFUM and unsigned(video_ctl.y) < x"150") then
+          prio := '1';
+        end if;
+
         ctl_o.pal_a <= attr_d_r(4 downto 0) & pel;
         ctl_o.prio <= prio;
         ctl_o.set <= '0'; -- default

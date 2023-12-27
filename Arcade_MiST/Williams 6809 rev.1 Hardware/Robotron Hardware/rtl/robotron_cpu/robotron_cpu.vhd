@@ -114,6 +114,8 @@ entity robotron_cpu is
         vgaBlue          : out   std_logic_vector(1 downto 0);
         Hsync            : out   std_logic;
         Vsync            : out   std_logic;
+        Hblank           : out   std_logic;
+        Vblank           : out   std_logic;
 
         -- PS/2 connector
         --PS2C             : in    std_logic;
@@ -574,6 +576,9 @@ begin
                 ram_lower_enable <= true;
                 ram_upper_enable <= true;
 
+                if video_hblank then Hblank <= '1'; else Hblank <= '0'; end if;
+                if video_vblank then Vblank <= '1'; else Vblank <= '0'; end if;
+
                 if video_hblank or video_vblank then
                     vgaRed <= (others => '0');
                     vgaGreen <= (others => '0');
@@ -596,6 +601,9 @@ begin
 
                 pixel_byte_l <= color_table(to_integer(unsigned(pixel_nibbles(3 downto 0))));
                 pixel_byte_h <= color_table(to_integer(unsigned(pixel_nibbles(7 downto 4))));
+
+                if video_hblank then Hblank <= '1'; else Hblank <= '0'; end if;
+                if video_vblank then Vblank <= '1'; else Vblank <= '0'; end if;
 
                 if video_hblank or video_vblank then
                     vgaRed <= (others => '0');

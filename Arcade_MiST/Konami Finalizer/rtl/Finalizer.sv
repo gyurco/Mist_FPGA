@@ -45,7 +45,8 @@ module Finalizer
 	
 	output               video_hsync, video_vsync, video_csync,
 	output               video_vblank, video_hblank,
-	output         [3:0] video_r, video_g, video_b,	
+	output         [3:0] video_r, video_g, video_b,
+	output               flipped,
 	output signed [15:0] sound,
 
 	input         [24:0] ioctl_addr,
@@ -282,16 +283,16 @@ k005885 u11E
 	.NNMI(k1_nmi),
 	.NIOC(nioc),
 	.HCTR(h_center),
-	.VCTR(v_center)
+	.VCTR(v_center),
 `ifdef MISTER_HISCORE
-	,
 	.hs_address(hs_address),
 	.hs_data_out(hs_data_out),
 	.hs_data_in(hs_data_in),
 	.hs_write_enable(hs_write_enable),
 	.hs_access_read(hs_access_read),
-	.hs_access_write(hs_access_write)
+	.hs_access_write(hs_access_write),
 `endif
+	.flipped(flipped)
 );
 
 //Graphics ROMs

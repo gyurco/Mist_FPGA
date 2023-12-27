@@ -226,7 +226,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/TropicalAngel_MiST.sv
 set_global_assignment -name VHDL_FILE ../rtl/TropicalAngel.vhd
 set_global_assignment -name VHDL_FILE ../rtl/moon_patrol_sound_board.vhd
 set_global_assignment -name QIP_FILE ../rtl/pll_mist.qip
-set_global_assignment -name QIP_FILE ../rtl/pll_aud.qip
+set_global_assignment -name QIP_FILE pll_aud.qip
 set_global_assignment -name VHDL_FILE ../rtl/gen_ram.vhd
 set_global_assignment -name VHDL_FILE ../rtl/dpram.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv

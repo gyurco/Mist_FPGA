@@ -585,6 +585,8 @@ rgb_palette_addr <=
 process (clock_6)
 begin
 	if rising_edge(clock_6) then
+		video_vblank <= vblank;
+		video_hblank <= hblank;
 		if hblank = '1' or vblank = '1' then
 			video_r <= "00000";
 			video_g <= "00000";
@@ -597,10 +599,7 @@ begin
 	end if;
 end process;
 
-video_hblank <= hblank;
-video_vblank <= vblank;
-
-----------------------------
+---------------------------
 -- video syncs and blanks --
 ----------------------------
 

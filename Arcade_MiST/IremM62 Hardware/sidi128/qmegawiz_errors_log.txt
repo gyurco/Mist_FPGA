@@ -1,0 +1,19 @@
+
+
+/home/gyuri/git/Mist_FPGA/Arcade_MiST/IremM62 Hardware/rtl/pll_aud.vhd
+
+Dec 26 12AM:31:00>: Error in CNX file format.
+
+Error messages are listed in file
+/home/gyuri/git/Mist_FPGA/Arcade_MiST/IremM62 Hardware/rtl/pll_aud.cnxerr.
+
+Can't create the custom megafunction variation file(s)
+
+/home/gyuri/git/Mist_FPGA/Arcade_MiST/IremM62 Hardware/rtl/pll_mist.vhd
+
+Dec 26 12AM:31:04>: Error in CNX file format.
+
+Error messages are listed in file
+/home/gyuri/git/Mist_FPGA/Arcade_MiST/IremM62 Hardware/rtl/pll_mist.cnxerr.
+
+Can't create the custom megafunction variation file(s)

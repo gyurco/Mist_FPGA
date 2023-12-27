@@ -12,6 +12,7 @@ use work.platform_variant_pkg.all;
 entity target_top is port(
 		clock_sys       : in std_logic;
 		vid_clk_en      : out std_logic;
+		hiresmode       : out std_logic;
 		clk_aud         : in std_logic;
 		reset_in        : in std_logic;
 		hwsel           : in HWSEL_t;
@@ -40,6 +41,8 @@ entity target_top is port(
 
 		VGA_VS          : out std_logic;
 		VGA_HS          : out std_logic;
+		VGA_HB          : out std_logic;
+		VGA_VB          : out std_logic;
 		VGA_R           : out std_logic_vector(3 downto 0);
 		VGA_G           : out std_logic_vector(3 downto 0);
 		VGA_B           : out std_logic_vector(3 downto 0);
@@ -82,6 +85,7 @@ architecture SYN of target_top is
 begin
 
   hires <= '0' when hwsel = HW_KUNGFUM or hwsel = HW_HORIZON or hwsel = HW_BATTROAD or hwsel = HW_YOUJYUDN else '1';
+	hiresmode <= hires;
 
   process(clock_sys) begin
     if rising_edge(clock_sys) then
@@ -131,6 +135,8 @@ end generate GEN_RESETS;
  VGA_B <= video_o.rgb.b(9 downto 6);
  VGA_HS <= video_o.hsync;
  VGA_VS <= video_o.vsync;
+ VGA_HB <= video_o.hblank;
+ VGA_VB <= video_o.vblank;
 
 Sound_Board : entity work.Sound_Board
 	port map(

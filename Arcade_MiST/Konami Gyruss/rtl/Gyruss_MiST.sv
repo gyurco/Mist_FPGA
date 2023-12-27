@@ -1,19 +1,46 @@
 module Gyruss_MiST (
+	input         CLOCK_27,
+`ifdef USE_CLOCK_50
+	input         CLOCK_50,
+`endif
+
 	output        LED,
-	output  [5:0] VGA_R,
-	output  [5:0] VGA_G,
-	output  [5:0] VGA_B,
+	output [VGA_BITS-1:0] VGA_R,
+	output [VGA_BITS-1:0] VGA_G,
+	output [VGA_BITS-1:0] VGA_B,
 	output        VGA_HS,
 	output        VGA_VS,
-	output        AUDIO_L,
-	output        AUDIO_R,
+
+`ifdef USE_HDMI
+	output        HDMI_RST,
+	output  [7:0] HDMI_R,
+	output  [7:0] HDMI_G,
+	output  [7:0] HDMI_B,
+	output        HDMI_HS,
+	output        HDMI_VS,
+	output        HDMI_PCLK,
+	output        HDMI_DE,
+	input         HDMI_INT,
+	inout         HDMI_SDA,
+	inout         HDMI_SCL,
+`endif
+
 	input         SPI_SCK,
-	output        SPI_DO,
+	inout         SPI_DO,
 	input         SPI_DI,
-	input         SPI_SS2,
-	input         SPI_SS3,
-	input         CONF_DATA0,
-	input         CLOCK_27,
+	input         SPI_SS2,    // data_io
+	input         SPI_SS3,    // OSD
+	input         CONF_DATA0, // SPI_SS for user_io
+
+`ifdef USE_QSPI
+	input         QSCK,
+	input         QCSn,
+	inout   [3:0] QDAT,
+`endif
+`ifndef NO_DIRECT_UPLOAD
+	input         SPI_SS4,
+`endif
+
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
 	output        SDRAM_DQML,
@@ -24,9 +51,95 @@ module Gyruss_MiST (
 	output        SDRAM_nCS,
 	output  [1:0] SDRAM_BA,
 	output        SDRAM_CLK,
-	output        SDRAM_CKE
+	output        SDRAM_CKE,
+
+`ifdef DUAL_SDRAM
+	output [12:0] SDRAM2_A,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_DQML,
+	output        SDRAM2_DQMH,
+	output        SDRAM2_nWE,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nCS,
+	output  [1:0] SDRAM2_BA,
+	output        SDRAM2_CLK,
+	output        SDRAM2_CKE,
+`endif
+
+	output        AUDIO_L,
+	output        AUDIO_R,
+`ifdef I2S_AUDIO
+	output        I2S_BCK,
+	output        I2S_LRCK,
+	output        I2S_DATA,
+`endif
+`ifdef I2S_AUDIO_HDMI
+	output        HDMI_MCLK,
+	output        HDMI_BCK,
+	output        HDMI_LRCK,
+	output        HDMI_SDATA,
+`endif
+`ifdef SPDIF_AUDIO
+	output        SPDIF,
+`endif
+`ifdef USE_AUDIO_IN
+	input         AUDIO_IN,
+`endif
+	input         UART_RX,
+	output        UART_TX
 
 );
+
+`ifdef NO_DIRECT_UPLOAD
+localparam bit DIRECT_UPLOAD = 0;
+wire SPI_SS4 = 1;
+`else
+localparam bit DIRECT_UPLOAD = 1;
+`endif
+
+`ifdef USE_QSPI
+localparam bit QSPI = 1;
+assign QDAT = 4'hZ;
+`else
+localparam bit QSPI = 0;
+`endif
+
+`ifdef VGA_8BIT
+localparam VGA_BITS = 8;
+`else
+localparam VGA_BITS = 6;
+`endif
+
+`ifdef USE_HDMI
+localparam bit HDMI = 1;
+assign HDMI_RST = 1'b1;
+`else
+localparam bit HDMI = 0;
+`endif
+
+`ifdef BIG_OSD
+localparam bit BIG_OSD = 1;
+`define SEP "-;",
+`else
+localparam bit BIG_OSD = 0;
+`define SEP
+`endif
+
+// remove this if the 2nd chip is actually used
+`ifdef DUAL_SDRAM
+assign SDRAM2_A = 13'hZZZZ;
+assign SDRAM2_BA = 0;
+assign SDRAM2_DQML = 1;
+assign SDRAM2_DQMH = 1;
+assign SDRAM2_CKE = 0;
+assign SDRAM2_CLK = 0;
+assign SDRAM2_nCS = 1;
+assign SDRAM2_DQ = 16'hZZZZ;
+assign SDRAM2_nCAS = 1;
+assign SDRAM2_nRAS = 1;
+assign SDRAM2_nWE = 1;
+`endif
 
 `include "build_id.v"
 
@@ -37,7 +150,9 @@ localparam CONF_STR = {
 	"O5,Blend,Off,On;",
 	"O6,Joystick Swap,Off,On;",
 	"O7,Service,Off,On;",
+	`SEP
 	"DIP;",
+	`SEP
 	"T0,Reset;",
 	"V,v1.00.",`BUILD_DATE
 };
@@ -70,22 +185,53 @@ wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
 wire  [6:0] core_mod;
-wire [15:0] audio_l, audio_r;
-wire        hs, vs, cs;
-wire        hb, vb;
-wire        blankn = ~(hb | vb);
-wire  [2:0] r, g;
-wire  [1:0] b;
 wire        key_strobe;
 wire        key_pressed;
 wire  [7:0] key_code;
+`ifdef USE_HDMI
+wire        i2c_start;
+wire        i2c_read;
+wire  [6:0] i2c_addr;
+wire  [7:0] i2c_subaddr;
+wire  [7:0] i2c_dout;
+wire  [7:0] i2c_din;
+wire        i2c_ack;
+wire        i2c_end;
+`endif
 
-wire [15:0] main_rom_addr;
-wire [15:0] main_rom_do;
-wire [12:0] sub_rom_addr;
-wire [15:0] sub_rom_do;
-wire [12:0] sp_addr;
-wire [31:0] sp_do;
+user_io #(
+	.STRLEN($size(CONF_STR)>>3),
+	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
+user_io(
+	.clk_sys        (clock_49       ),
+	.conf_str       (CONF_STR       ),
+	.SPI_CLK        (SPI_SCK        ),
+	.SPI_SS_IO      (CONF_DATA0     ),
+	.SPI_MISO       (SPI_DO         ),
+	.SPI_MOSI       (SPI_DI         ),
+	.buttons        (buttons        ),
+	.switches       (switches       ),
+	.scandoubler_disable (scandoublerD),
+	.ypbpr          (ypbpr          ),
+	.no_csync       (no_csync       ),
+`ifdef USE_HDMI
+	.i2c_start      (i2c_start      ),
+	.i2c_read       (i2c_read       ),
+	.i2c_addr       (i2c_addr       ),
+	.i2c_subaddr    (i2c_subaddr    ),
+	.i2c_dout       (i2c_dout       ),
+	.i2c_din        (i2c_din        ),
+	.i2c_ack        (i2c_ack        ),
+	.i2c_end        (i2c_end        ),
+`endif
+	.core_mod       (core_mod       ),
+	.key_strobe     (key_strobe     ),
+	.key_pressed    (key_pressed    ),
+	.key_code       (key_code       ),
+	.joystick_0     (joystick_0     ),
+	.joystick_1     (joystick_1     ),
+	.status         (status         )
+	);
 
 wire        ioctl_downl;
 wire  [7:0] ioctl_index;
@@ -104,7 +250,14 @@ data_io data_io(
 	.ioctl_addr    ( ioctl_addr   ),
 	.ioctl_dout    ( ioctl_dout   )
 );
+
 wire [24:0] bg_ioctl_addr = ioctl_addr - 16'hA000;
+wire [15:0] main_rom_addr;
+wire [15:0] main_rom_do;
+wire [12:0] sub_rom_addr;
+wire [15:0] sub_rom_do;
+wire [12:0] sp_addr;
+wire [31:0] sp_do;
 
 reg port1_req, port2_req;
 sdram #(49) sdram(
@@ -162,6 +315,12 @@ always @(posedge clock_49) begin
 	reset <= status[0] | buttons[1] | ~rom_loaded;
 end
 
+wire [15:0] audio_l, audio_r;
+wire        hs, vs, cs;
+wire        hb, vb;
+wire  [2:0] r, g;
+wire  [1:0] b;
+
 Gyruss Gyruss(
 	.reset(~reset),
 	.clk_49m(clock_49), 
@@ -195,14 +354,16 @@ Gyruss Gyruss(
 	.sp_rom_do(sp_do)
 );
 
-mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10)) mist_video(
+mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD), .USE_BLANKS(1'b1)) mist_video(
 	.clk_sys        ( clock_49         ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( blankn ? r : 0   ),
-	.G              ( blankn ? g : 0   ),
-	.B              ( blankn ? {b, b[1]} : 0 ),
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( {b, b[1]}        ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
 	.HSync          ( hs               ),
 	.VSync          ( vs               ),
 	.VGA_R          ( VGA_R            ),
@@ -210,7 +371,7 @@ mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10)) mist_video(
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
-	.ce_divider     ( 0                ),
+	.ce_divider     ( 3'd0             ),
 	.rotate         ( { orientation[1], rotate } ),
 	.blend          ( blend            ),
 	.scandoubler_disable( scandoublerD ),
@@ -218,27 +379,56 @@ mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10)) mist_video(
 	.ypbpr          ( ypbpr            ),
 	.no_csync       ( no_csync         )
 	);
-	
-user_io #(.STRLEN(($size(CONF_STR)>>3)))user_io(
-	.clk_sys        (clock_49       ),
-	.conf_str       (CONF_STR       ),
-	.SPI_CLK        (SPI_SCK        ),
-	.SPI_SS_IO      (CONF_DATA0     ),
-	.SPI_MISO       (SPI_DO         ),
-	.SPI_MOSI       (SPI_DI         ),
-	.buttons        (buttons        ),
-	.switches       (switches       ),
-	.scandoubler_disable (scandoublerD),
-	.ypbpr          (ypbpr          ),
-	.no_csync       (no_csync       ),
-	.core_mod       (core_mod       ),
-	.key_strobe     (key_strobe     ),
-	.key_pressed    (key_pressed    ),
-	.key_code       (key_code       ),
-	.joystick_0     (joystick_0     ),
-	.joystick_1     (joystick_1     ),
-	.status         (status         )
+
+`ifdef USE_HDMI
+
+i2c_master #(49_000_000) i2c_master (
+	.CLK         (clock_49),
+
+	.I2C_START   (i2c_start),
+	.I2C_READ    (i2c_read),
+	.I2C_ADDR    (i2c_addr),
+	.I2C_SUBADDR (i2c_subaddr),
+	.I2C_WDATA   (i2c_dout),
+	.I2C_RDATA   (i2c_din),
+	.I2C_END     (i2c_end),
+	.I2C_ACK     (i2c_ack),
+
+	//I2C bus
+	.I2C_SCL     (HDMI_SCL),
+ 	.I2C_SDA     (HDMI_SDA)
+);
+
+mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(8), .BIG_OSD(BIG_OSD), .USE_BLANKS(1'b1)) hdmi_video(
+	.clk_sys        ( clock_49         ),
+	.SPI_SCK        ( SPI_SCK          ),
+	.SPI_SS3        ( SPI_SS3          ),
+	.SPI_DI         ( SPI_DI           ),
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( {b, b[1]}        ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
+	.HSync          ( hs               ),
+	.VSync          ( vs               ),
+	.VGA_R          ( HDMI_R           ),
+	.VGA_G          ( HDMI_G           ),
+	.VGA_B          ( HDMI_B           ),
+	.VGA_VS         ( HDMI_VS          ),
+	.VGA_HS         ( HDMI_HS          ),
+	.VGA_DE         ( HDMI_DE          ),
+	.ce_divider     ( 3'd0             ),
+	.rotate         ( { orientation[1], rotate } ),
+	.blend          ( blend            ),
+	.scandoubler_disable( 1'b0         ),
+	.scanlines      ( scanlines        ),
+	.ypbpr          ( 1'b0             ),
+	.no_csync       ( 1'b1             )
 	);
+
+assign HDMI_PCLK = clock_49;
+
+`endif
 
 dac #(.C_bits(16))dac_l(
 	.clk_i(clock_49),
@@ -253,6 +443,39 @@ dac #(.C_bits(16))dac_r(
 	.dac_i({~audio_r[15], audio_r[14:0]}),
 	.dac_o(AUDIO_R)
 	);
+
+`ifdef I2S_AUDIO
+i2s i2s (
+	.reset(1'b0),
+	.clk(clock_49),
+	.clk_rate(32'd49_000_000),
+	.sclk(I2S_BCK),
+	.lrclk(I2S_LRCK),
+	.sdata(I2S_DATA),
+	.left_chan(audio_l),
+	.right_chan(audio_r)
+);
+
+`ifdef I2S_AUDIO_HDMI
+assign HDMI_MCLK = 0;
+always @(posedge clock_49) begin
+	HDMI_BCK <= I2S_BCK;
+	HDMI_LRCK <= I2S_LRCK;
+	HDMI_SDATA <= I2S_DATA;
+end
+`endif
+
+`endif // I2S_AUDIO
+
+`ifdef SPDIF_AUDIO
+spdif spdif (
+	.rst_i(1'b0),
+	.clk_i(clock_49),
+	.clk_rate_i(32'd49_000_000),
+	.spdif_o(SPDIF),
+	.sample_i({audio_r, audio_l})
+);
+`endif
 
 wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;

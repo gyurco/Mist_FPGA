@@ -74,6 +74,7 @@ set_location_assignment PIN_80 -to AUDIO_R
 set_location_assignment PIN_105 -to SPI_DO
 set_location_assignment PIN_88 -to SPI_DI
 set_location_assignment PIN_126 -to SPI_SCK
+set_location_assignment PIN_127 -to SPI_SS2
 set_location_assignment PIN_91 -to SPI_SS3
 set_location_assignment PIN_13 -to CONF_DATA0
 set_location_assignment PIN_49 -to SDRAM_A[0]
@@ -220,12 +221,12 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 
 # end ENTITY(pooyan_mist)
 # -----------------------
-set_location_assignment PIN_127 -to SPI_SS2
+set_global_assignment -name VERILOG_FILE pll.v
+set_global_assignment -name VERILOG_FILE pll_aud.v
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/pooyan_mist.sv
 set_global_assignment -name VHDL_FILE ../rtl/pooyan.vhd
 set_global_assignment -name VHDL_FILE ../rtl/gen_video.vhd
 set_global_assignment -name VHDL_FILE ../rtl/gen_ram.vhd
-set_global_assignment -name VERILOG_FILE ../rtl/pll.v
 set_global_assignment -name VHDL_FILE ../rtl/rom/pooyan_sprite_grphx2.vhd
 set_global_assignment -name VHDL_FILE ../rtl/rom/pooyan_sprite_grphx1.vhd
 set_global_assignment -name VHDL_FILE ../rtl/rom/pooyan_sprite_color_lut.vhd

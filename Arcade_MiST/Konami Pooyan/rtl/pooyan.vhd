@@ -80,7 +80,8 @@ port(
  video_g        : out std_logic_vector(2 downto 0);
  video_b        : out std_logic_vector(1 downto 0);
  video_clk      : out std_logic;
- video_blankn   : out std_logic;
+ video_hblank   : out std_logic;
+ video_vblank   : out std_logic;
  video_hs       : out std_logic;
  video_vs       : out std_logic;
  video_csync    : out std_logic;
@@ -573,23 +574,24 @@ process(clock_6)
 	variable vsync_cnt : std_logic_vector(3 downto 0);
 begin
 
-if rising_edge(clock_6) and pxcnt = "111" then
+if rising_edge(clock_6) then
+	if pxcnt = "111" then
 
 		if    hcnt = hcnt_base+0 then hsync0 <= '0';
 		elsif hcnt = hcnt_base+3 then hsync0 <= '1';
 		end if;
 
-  if    hcnt = hcnt_base+0     then hsync1 <= '0';
-  elsif hcnt = hcnt_base+1     then hsync1 <= '1';
-  elsif hcnt = hcnt_base+24-48 then hsync1 <= '0';
-  elsif hcnt = hcnt_base+25-48 then hsync1 <= '1';
-  end if;
+		if    hcnt = hcnt_base+0     then hsync1 <= '0';
+		elsif hcnt = hcnt_base+1     then hsync1 <= '1';
+		elsif hcnt = hcnt_base+24-48 then hsync1 <= '0';
+		elsif hcnt = hcnt_base+25-48 then hsync1 <= '1';
+		end if;
 
-  if    hcnt = hcnt_base+0        then hsync2 <= '0';
-  elsif hcnt = hcnt_base+24-1-48  then hsync2 <= '1';
-  elsif hcnt = hcnt_base+24-48    then hsync2 <= '0';
-  elsif hcnt = hcnt_base+0-1      then hsync2 <= '1';
-  end if;
+		if    hcnt = hcnt_base+0        then hsync2 <= '0';
+		elsif hcnt = hcnt_base+24-1-48  then hsync2 <= '1';
+		elsif hcnt = hcnt_base+24-48    then hsync2 <= '0';
+		elsif hcnt = hcnt_base+0-1      then hsync2 <= '1';
+		end if;
   
 		if hcnt = hcnt_base then 
 			if vcnt = 500 then
@@ -599,36 +601,37 @@ if rising_edge(clock_6) and pxcnt = "111" then
 			end if;
 		end if;	 
 
-  if    vsync_cnt = 0 then csync <= hsync1;
-  elsif vsync_cnt = 1 then csync <= hsync1;
-  elsif vsync_cnt = 2 then csync <= hsync1;
-  elsif vsync_cnt = 3 then csync <= hsync2;
-  elsif vsync_cnt = 4 then csync <= hsync2;
-  elsif vsync_cnt = 5 then csync <= hsync2;
-  elsif vsync_cnt = 6 then csync <= hsync1;
-  elsif vsync_cnt = 7 then csync <= hsync1;
-  elsif vsync_cnt = 8 then csync <= hsync1;
-  else                     csync <= hsync0;
-			end if;
-
-  if    hcnt = hcnt_base-6  then hblank <= '1'; 
-  elsif hcnt = hcnt_base+10  then hblank <= '0';
-  end if;
-
-  if    vcnt = 496 then vblank <= '1';   -- 492 ok
-  elsif vcnt = 262 then vblank <= '0';   -- 262 ok 
+		if    vsync_cnt = 0 then csync <= hsync1;
+		elsif vsync_cnt = 1 then csync <= hsync1;
+		elsif vsync_cnt = 2 then csync <= hsync1;
+		elsif vsync_cnt = 3 then csync <= hsync2;
+		elsif vsync_cnt = 4 then csync <= hsync2;
+		elsif vsync_cnt = 5 then csync <= hsync2;
+		elsif vsync_cnt = 6 then csync <= hsync1;
+		elsif vsync_cnt = 7 then csync <= hsync1;
+		elsif vsync_cnt = 8 then csync <= hsync1;
+		else                     csync <= hsync0;
 		end if;
 
-  -- external sync and blank outputs
-  video_blankn <= not (hblank or vblank);
+		if    hcnt = hcnt_base-6  then 
+			hblank <= '1'; 
+			if vcnt = 496 then vblank <= '1'; end if;  -- 492 ok
+		elsif hcnt = hcnt_base+10  then
+			hblank <= '0';
+			if vcnt = 262 then vblank <= '0'; end if;  -- 262 ok 
+		end if;
 
+		-- external sync and blank outputs
 		video_hs <= hsync0;
 	  
 		if    vsync_cnt = 0 then video_vs <= '0';
 		elsif vsync_cnt = 8 then video_vs <= '1';
 		end if;
 
+		video_hblank <= hblank;
+		video_vblank <= vblank;
 	end if;
+end if;
 end process;
 
 ------------------------------

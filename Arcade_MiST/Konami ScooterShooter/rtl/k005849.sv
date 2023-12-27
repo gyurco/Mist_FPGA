@@ -151,11 +151,11 @@ reg frame_odd_even = 0;
 always_ff @(posedge CK49) begin
 	if(cen_6m) begin
 		case(h_cnt)
-			5: begin
+			6: begin
 				hblank <= hmask_en;
 				h_cnt <= h_cnt + 9'd1;
 			end
-			13: begin
+			14: begin
 				hblank <= 0;
 				h_cnt <= h_cnt + 9'd1;
 			end

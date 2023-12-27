@@ -1,21 +1,157 @@
 module MissileCommand_MiST(
+	input         CLOCK_27,
+`ifdef USE_CLOCK_50
+	input         CLOCK_50,
+`endif
+
 	output        LED,
-	output  [5:0] VGA_R,
-	output  [5:0] VGA_G,
-	output  [5:0] VGA_B,
+	output [VGA_BITS-1:0] VGA_R,
+	output [VGA_BITS-1:0] VGA_G,
+	output [VGA_BITS-1:0] VGA_B,
 	output        VGA_HS,
 	output        VGA_VS,
+
+`ifdef USE_HDMI
+	output        HDMI_RST,
+	output  [7:0] HDMI_R,
+	output  [7:0] HDMI_G,
+	output  [7:0] HDMI_B,
+	output        HDMI_HS,
+	output        HDMI_VS,
+	output        HDMI_PCLK,
+	output        HDMI_DE,
+	input         HDMI_INT,
+	inout         HDMI_SDA,
+	inout         HDMI_SCL,
+`endif
+
+	input         SPI_SCK,
+	inout         SPI_DO,
+	input         SPI_DI,
+	input         SPI_SS2,    // data_io
+	input         SPI_SS3,    // OSD
+	input         CONF_DATA0, // SPI_SS for user_io
+
+`ifdef USE_QSPI
+	input         QSCK,
+	input         QCSn,
+	inout   [3:0] QDAT,
+`endif
+`ifndef NO_DIRECT_UPLOAD
+	input         SPI_SS4,
+`endif
+
+	output [12:0] SDRAM_A,
+	inout  [15:0] SDRAM_DQ,
+	output        SDRAM_DQML,
+	output        SDRAM_DQMH,
+	output        SDRAM_nWE,
+	output        SDRAM_nCAS,
+	output        SDRAM_nRAS,
+	output        SDRAM_nCS,
+	output  [1:0] SDRAM_BA,
+	output        SDRAM_CLK,
+	output        SDRAM_CKE,
+
+`ifdef DUAL_SDRAM
+	output [12:0] SDRAM2_A,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_DQML,
+	output        SDRAM2_DQMH,
+	output        SDRAM2_nWE,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nCS,
+	output  [1:0] SDRAM2_BA,
+	output        SDRAM2_CLK,
+	output        SDRAM2_CKE,
+`endif
+
 	output        AUDIO_L,
 	output        AUDIO_R,
-	input         SPI_SCK,
-	output        SPI_DO,
-	input         SPI_DI,
-	input         SPI_SS2,
-	input         SPI_SS3,
-	input         CONF_DATA0,
-	input         CLOCK_27,
-	output        SDRAM_CKE
+`ifdef I2S_AUDIO
+	output        I2S_BCK,
+	output        I2S_LRCK,
+	output        I2S_DATA,
+`endif
+`ifdef I2S_AUDIO_HDMI
+	output        HDMI_MCLK,
+	output        HDMI_BCK,
+	output        HDMI_LRCK,
+	output        HDMI_SDATA,
+`endif
+`ifdef SPDIF_AUDIO
+	output        SPDIF,
+`endif
+`ifdef USE_AUDIO_IN
+	input         AUDIO_IN,
+`endif
+	input         UART_RX,
+	output        UART_TX
+
 );
+
+`ifdef NO_DIRECT_UPLOAD
+localparam bit DIRECT_UPLOAD = 0;
+wire SPI_SS4 = 1;
+`else
+localparam bit DIRECT_UPLOAD = 1;
+`endif
+
+`ifdef USE_QSPI
+localparam bit QSPI = 1;
+assign QDAT = 4'hZ;
+`else
+localparam bit QSPI = 0;
+`endif
+
+`ifdef VGA_8BIT
+localparam VGA_BITS = 8;
+`else
+localparam VGA_BITS = 6;
+`endif
+
+`ifdef USE_HDMI
+localparam bit HDMI = 1;
+assign HDMI_RST = 1'b1;
+`else
+localparam bit HDMI = 0;
+`endif
+
+`ifdef BIG_OSD
+localparam bit BIG_OSD = 1;
+`define SEP "-;",
+`else
+localparam bit BIG_OSD = 0;
+`define SEP
+`endif
+
+// remove this if the 2nd chip is actually used
+`ifdef DUAL_SDRAM
+assign SDRAM2_A = 13'hZZZZ;
+assign SDRAM2_BA = 0;
+assign SDRAM2_DQML = 1;
+assign SDRAM2_DQMH = 1;
+assign SDRAM2_CKE = 0;
+assign SDRAM2_CLK = 0;
+assign SDRAM2_nCS = 1;
+assign SDRAM2_DQ = 16'hZZZZ;
+assign SDRAM2_nCAS = 1;
+assign SDRAM2_nRAS = 1;
+assign SDRAM2_nWE = 1;
+`endif
+
+assign SDRAM_A = 13'hZZZZ;
+assign SDRAM_BA = 0;
+assign SDRAM_DQML = 1;
+assign SDRAM_DQMH = 1;
+assign SDRAM_CKE = 0;
+assign SDRAM_CLK = 0;
+assign SDRAM_nCS = 1;
+assign SDRAM_DQ = 16'hZZZZ;
+assign SDRAM_nCAS = 1;
+assign SDRAM_nRAS = 1;
+assign SDRAM_nWE = 1;
 
 `include "build_id.v"
 
@@ -23,7 +159,8 @@ localparam CONF_STR = {
 	"MISSILE;;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O1,Pause,Off,On;",
-
+	"O2,Blend,Off,On;",
+	`SEP
 	"P1,Switches;",
 	"P1O89,Coinage,1C_1C,2C_1C,Free_Play,1C_2C;",
 	"P1OA,Service,Off,On;",
@@ -34,19 +171,19 @@ localparam CONF_STR = {
 	"P1OG,Trackball Size,Large,Mini;",
 	"P1OHJ,Bonus City,None,8000,20000,18000,15000,14000,12000,10000;",
 	"P1OK,Cabinet,Upright,Cocktail;",
-	
+	`SEP
 	"OOP,Mouse/trackball speed,25%,50%,100%,200%;",
 	"OQR,Button order,LMR,LRM,MRL,MLR;",
 	"OS,Joystick mode,Digital,Analog;",
 	"OT,Joystick speed,Low,High;",
-	
+	`SEP
 	"T0,Reset;",
 	"V,v1.0.",`BUILD_DATE
 };
 
 wire        pause  = status[1];
 wire [1:0]  scanlines = status[4:3];
-wire        blend  = 0;
+wire        blend  = status[2];
 wire        service = status[10];
 
 wire		dip_cocktail = ~status[20];		// 1= Upright, 0=Cocktail (enable flip)
@@ -71,7 +208,7 @@ wire pll_locked;
 pll_mist pll(
 	.inclk0(CLOCK_27),
 	.areset(0),
-	.c0(clk_sys),//20
+	.c0(clk_sys),//40
 	.c1(clk_core),//10
 	.locked(pll_locked)
 	);
@@ -114,10 +251,20 @@ wire  [8:0] mouse_x;
 wire  [8:0] mouse_y;
 wire  [7:0] mouse_flags;  // YOvfl, XOvfl, dy8, dx8, 1, mbtn, rbtn, lbtn
 wire        mouse_strobe;
-
+`ifdef USE_HDMI
+wire        i2c_start;
+wire        i2c_read;
+wire  [6:0] i2c_addr;
+wire  [7:0] i2c_subaddr;
+wire  [7:0] i2c_dout;
+wire  [7:0] i2c_din;
+wire        i2c_ack;
+wire        i2c_end;
+`endif
 
 user_io #(
-	.STRLEN(($size(CONF_STR)>>3)))
+	.STRLEN(($size(CONF_STR)>>3)),
+	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
 user_io(
 	.clk_sys        (clk_core       ),
 	.conf_str       (CONF_STR       ),
@@ -130,13 +277,23 @@ user_io(
 	.scandoubler_disable (scandoublerD),
 	.ypbpr          (ypbpr          ),
 	.no_csync       (no_csync       ),
+`ifdef USE_HDMI
+	.i2c_start      (i2c_start      ),
+	.i2c_read       (i2c_read       ),
+	.i2c_addr       (i2c_addr       ),
+	.i2c_subaddr    (i2c_subaddr    ),
+	.i2c_dout       (i2c_dout       ),
+	.i2c_din        (i2c_din        ),
+	.i2c_ack        (i2c_ack        ),
+	.i2c_end        (i2c_end        ),
+`endif
 	.key_strobe     (key_strobe     ),
 	.key_pressed    (key_pressed    ),
 	.key_code       (key_code       ),
 	.mouse_strobe   (mouse_strobe   ),
 	.mouse_x        (mouse_x        ),
 	.mouse_y        (mouse_y        ),
-    .mouse_flags    (mouse_flags    ),
+	.mouse_flags    (mouse_flags    ),
 	.joystick_0     (joystick_0     ),
 	.joystick_1     (joystick_1     ),
 	.joystick_analog_0(joystick_analog_0),
@@ -181,7 +338,6 @@ end
 
 wire [5:0] audio;
 wire        hs, vs, hb, vb;
-wire        blankn = ~(hb | vb);
 wire			g, r, b;
 
 missile missile_inst(
@@ -250,16 +406,18 @@ trackball trackball
 	.h_clk(htb_clk1)
 );
 
-mist_video #(.COLOR_DEPTH(1), .SD_HCNT_WIDTH(10)) mist_video(
+mist_video #(.COLOR_DEPTH(1), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys        ( clk_sys          ),
 	.scanlines      ( scanlines        ),
 	.blend          ( blend            ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( blankn ? r : 0   ),
-	.G              ( blankn ? g : 0   ),
-	.B              ( blankn ? b : 0   ),
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( b                ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
 	.HSync          ( hs               ),
 	.VSync          ( vs               ),
 	.VGA_R          ( VGA_R            ),
@@ -267,18 +425,97 @@ mist_video #(.COLOR_DEPTH(1), .SD_HCNT_WIDTH(10)) mist_video(
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
-	.scandoubler_disable(scandoublerD ),
-	.ypbpr          ( ypbpr            )
+	.scandoubler_disable(scandoublerD  ),
+	.ypbpr          ( ypbpr            ),
+	.no_csync       ( no_csync         )
 	);
+
+`ifdef USE_HDMI
+
+i2c_master #(10_000_000) i2c_master (
+	.CLK         (clk_core),
+
+	.I2C_START   (i2c_start),
+	.I2C_READ    (i2c_read),
+	.I2C_ADDR    (i2c_addr),
+	.I2C_SUBADDR (i2c_subaddr),
+	.I2C_WDATA   (i2c_dout),
+	.I2C_RDATA   (i2c_din),
+	.I2C_END     (i2c_end),
+	.I2C_ACK     (i2c_ack),
+
+	//I2C bus
+	.I2C_SCL     (HDMI_SCL),
+ 	.I2C_SDA     (HDMI_SDA)
+);
+
+mist_video #(.COLOR_DEPTH(1), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(8), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) hdmi_video(
+	.clk_sys        ( clk_sys          ),
+	.scanlines      ( scanlines        ),
+	.blend          ( blend            ),
+	.SPI_SCK        ( SPI_SCK          ),
+	.SPI_SS3        ( SPI_SS3          ),
+	.SPI_DI         ( SPI_DI           ),
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( b                ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
+	.HSync          ( hs               ),
+	.VSync          ( vs               ),
+	.VGA_R          ( HDMI_R           ),
+	.VGA_G          ( HDMI_G           ),
+	.VGA_B          ( HDMI_B           ),
+	.VGA_VS         ( HDMI_VS          ),
+	.VGA_HS         ( HDMI_HS          ),
+	.VGA_DE         ( HDMI_DE          ),
+	.scandoubler_disable(1'b0          ),
+	.ypbpr          ( 1'b0             ),
+	.no_csync       ( 1'b1             )
+	);
+
+assign HDMI_PCLK = clk_sys;
+`endif
 
 dac #(
 	.C_bits(6))
 dac_l(
-	.clk_i(clk_core),
+	.clk_i(clk_sys),
 	.res_n_i(1),
 	.dac_i(audio),
 	.dac_o(AUDIO_L)
 	);
+
+`ifdef I2S_AUDIO
+i2s i2s (
+	.reset(1'b0),
+	.clk(clk_sys),
+	.clk_rate(32'd40_000_000),
+	.sclk(I2S_BCK),
+	.lrclk(I2S_LRCK),
+	.sdata(I2S_DATA),
+	.left_chan({{3{~audio[5]}}, audio[4:0], audio[4:0], audio[4:2]}),
+	.right_chan({{3{~audio[5]}}, audio[4:0], audio[4:0], audio[4:2]})
+);
+`ifdef I2S_AUDIO_HDMI
+assign HDMI_MCLK = 0;
+always @(posedge clk_sys) begin
+	HDMI_BCK <= I2S_BCK;
+	HDMI_LRCK <= I2S_LRCK;
+	HDMI_SDATA <= I2S_DATA;
+end
+`endif
+`endif
+
+`ifdef SPDIF_AUDIO
+spdif spdif (
+	.rst_i(1'b0),
+	.clk_i(clk_sys),
+	.clk_rate_i(32'd40_000_000),
+	.spdif_o(SPDIF),
+	.sample_i({2{{3{~audio[5]}}, audio[4:0], audio[4:0], audio[4:2]}})
+);
+`endif
 
 wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;

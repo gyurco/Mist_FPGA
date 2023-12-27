@@ -13,7 +13,7 @@ use work.project_pkg.all;
 entity PACE is
   port
   (
-  	-- clocks and resets
+    -- clocks and resets
     clkrst_i        : in from_CLKRST_t;
     palmode         : in std_logic;
 
@@ -29,7 +29,7 @@ entity PACE is
     video_i         : in from_VIDEO_t;
     video_o         : out to_VIDEO_t;
 
-	 sound_data_o    : out std_logic_vector(7 downto 0)
+    sound_data_o    : out std_logic_vector(7 downto 0)
 
     -- custom i/o
  --   project_i       : in from_PROJECT_IO_t;

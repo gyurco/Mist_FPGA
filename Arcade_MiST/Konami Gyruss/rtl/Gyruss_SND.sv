@@ -42,6 +42,11 @@ module Gyruss_SND
 	output         [7:0] controls_dip,
 	output signed [15:0] sound_l, sound_r,
 	
+	//This input serves to select different fractional dividers to acheive 3.579545MHz for the Z80, 1.789772MHz for the
+	//AY-3-8910s and 8MHz for the i8039 depending on whether Gyruss runs with original or underclocked timings to normalize
+	//sync frequencies
+	input                underclock,
+	
 	input                ep10_cs_i,
 	input                ep11_cs_i,
 	input                ep12_cs_i,
@@ -68,31 +73,31 @@ reg [8:0] div = 9'd0;
 always_ff @(posedge clk_49m) begin
 	div <= div + 9'd1;
 end
-reg [3:0] n_div = 4'd0;
-always_ff @(negedge clk_49m) begin
-	n_div <= n_div + 4'd1;
-end
-wire n_cen_3m = !n_div;
+wire cen_3m = !div[3:0];
 wire cen_dcrm = !div;
 
 //Generate 3.579545MHz clock enable for Z80, 1.789772MHz clock enable for AY-3-8910s, clock enable for AY-3-8910 timer
 //(uses Jotego's fractional clock divider from JTFRAME)
+wire [9:0] sound_cen_n = underclock ? 10'd62 : 10'd60;
+wire [9:0] sound_cen_m = underclock ? 10'd843 : 10'd824;
 wire cen_3m58, cen_1m79, cen_timer;
 jtframe_frac_cen #(11) sound_cen
 (
 	.clk(clk_49m),
-	.n(10'd60),
-	.m(10'd824),
+	.n(sound_cen_n),
+	.m(sound_cen_m),
 	.cen({cen_timer, 8'bZZZZZZZZ, cen_1m79, cen_3m58})
 );
 
 //Also use Jotego's fractional clock divider to generate an 8MHz clock enable for the i8039 MCU
+wire [9:0] i8039_cen_n = underclock ? 10'd84 : 10'd42;
+wire [9:0] i8039_cen_m = underclock ? 10'd511 : 10'd258;
 wire cen_8m;
 jtframe_frac_cen #(2) i8039_cen
 (
 	.clk(clk_49m),
-	.n(10'd42),
-	.m(10'd258),
+	.n(i8039_cen_n),
+	.m(i8039_cen_m),
 	.cen({1'bZ, cen_8m})
 );
 
@@ -195,7 +200,7 @@ spram #(4, 10) u5A
 //Latch sound data coming in from CPU board
 reg [7:0] sound_D = 8'd0;
 always_ff @(posedge clk_49m) begin
-	if(n_cen_3m && cs_sounddata)
+	if(cen_3m && cs_sounddata)
 		sound_D <= cpubrd_Din;
 end
 
@@ -205,7 +210,7 @@ reg n_irq = 1;
 always_ff @(posedge clk_49m or posedge irq_clr) begin
 	if(irq_clr)
 		n_irq <= 1;
-	else if(n_cen_3m && irq_trigger)
+	else if(cen_3m && irq_trigger)
 		n_irq <= 0;
 end
 
@@ -753,10 +758,8 @@ gyruss_lpf aalpf_r
 	.out(right_lpf)
 );
 
-assign sound_l = (ay2A_sound + ay2B_sound + ay2C_sound + ay5A_sound + ay5B_sound + ay5C_sound + i8039_sound);
-assign sound_r = (ay1A_sound + ay1B_sound + ay1C_sound + ay3A_sound + ay3B_sound + ay3C_sound + ay4A_sound +
-                                ay4B_sound + ay4C_sound);
-//assign sound_l = left_lpf;
-//assign sound_r = right_lpf;
+
+assign sound_l = left_lpf;
+assign sound_r = right_lpf;
 
 endmodule

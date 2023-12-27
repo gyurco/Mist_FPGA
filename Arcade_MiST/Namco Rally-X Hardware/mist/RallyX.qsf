@@ -211,7 +211,8 @@ set_global_assignment -name VERILOG_FILE ../rtl/nrx_hvgen.v
 set_global_assignment -name VERILOG_FILE ../rtl/nrx_sprite.v
 set_global_assignment -name VERILOG_FILE ../rtl/nrx_sound.v
 set_global_assignment -name VERILOG_FILE ../rtl/nrx_psg_voice.v
-set_global_assignment -name VERILOG_FILE ../rtl/pll.v
+set_global_assignment -name QIP_FILE ../rtl/pll.qip
+set_global_assignment -name QIP_FILE ../rtl/pll_snd.qip
 set_global_assignment -name VHDL_FILE ../rtl/dpram.vhd
 set_global_assignment -name VHDL_FILE ../rtl/spram.vhd
 set_global_assignment -name VHDL_FILE ../rtl/time_pilot_sound_board.vhd

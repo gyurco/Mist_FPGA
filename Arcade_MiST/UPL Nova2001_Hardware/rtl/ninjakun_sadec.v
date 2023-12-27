@@ -5,13 +5,13 @@ module ninjakun_sadec
 	input  [1:0] HWTYPE,
 	input [15:0] CPADR,
 	input        CPSEL,
-	output       CS_SCRX,
-	output       CS_SCRY,
-	output       CS_PSG,
-	output       CS_FGV,
-	output       CS_BGV,
-	output       CS_SPA,
-	output       CS_PAL
+	output reg   CS_SCRX,
+	output reg   CS_SCRY,
+	output reg   CS_PSG,
+	output reg   CS_FGV,
+	output reg   CS_BGV,
+	output reg   CS_SPA,
+	output reg   CS_PAL
 );
 
 `include "defs.v"

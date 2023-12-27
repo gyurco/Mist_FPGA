@@ -8,21 +8,47 @@
 //  Playball!/Lotto Fun/Speed Ball
 
 module RobotronFPGA_MiST(
+	input         CLOCK_27,
+`ifdef USE_CLOCK_50
+	input         CLOCK_50,
+`endif
+
 	output        LED,
-	output  [5:0] VGA_R,
-	output  [5:0] VGA_G,
-	output  [5:0] VGA_B,
+	output [VGA_BITS-1:0] VGA_R,
+	output [VGA_BITS-1:0] VGA_G,
+	output [VGA_BITS-1:0] VGA_B,
 	output        VGA_HS,
 	output        VGA_VS,
-	output        AUDIO_L,
-	output        AUDIO_R,
+
+`ifdef USE_HDMI
+	output        HDMI_RST,
+	output  [7:0] HDMI_R,
+	output  [7:0] HDMI_G,
+	output  [7:0] HDMI_B,
+	output        HDMI_HS,
+	output        HDMI_VS,
+	output        HDMI_PCLK,
+	output        HDMI_DE,
+	input         HDMI_INT,
+	inout         HDMI_SDA,
+	inout         HDMI_SCL,
+`endif
+
 	input         SPI_SCK,
-	output        SPI_DO,
+	inout         SPI_DO,
 	input         SPI_DI,
-	input         SPI_SS2,
-	input         SPI_SS3,
-	input         CONF_DATA0,
-	input         CLOCK_27,
+	input         SPI_SS2,    // data_io
+	input         SPI_SS3,    // OSD
+	input         CONF_DATA0, // SPI_SS for user_io
+
+`ifdef USE_QSPI
+	input         QSCK,
+	input         QCSn,
+	inout   [3:0] QDAT,
+`endif
+`ifndef NO_DIRECT_UPLOAD
+	input         SPI_SS4,
+`endif
 
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
@@ -34,8 +60,95 @@ module RobotronFPGA_MiST(
 	output        SDRAM_nCS,
 	output  [1:0] SDRAM_BA,
 	output        SDRAM_CLK,
-	output        SDRAM_CKE
+	output        SDRAM_CKE,
+
+`ifdef DUAL_SDRAM
+	output [12:0] SDRAM2_A,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_DQML,
+	output        SDRAM2_DQMH,
+	output        SDRAM2_nWE,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nCS,
+	output  [1:0] SDRAM2_BA,
+	output        SDRAM2_CLK,
+	output        SDRAM2_CKE,
+`endif
+
+	output        AUDIO_L,
+	output        AUDIO_R,
+`ifdef I2S_AUDIO
+	output        I2S_BCK,
+	output        I2S_LRCK,
+	output        I2S_DATA,
+`endif
+`ifdef I2S_AUDIO_HDMI
+	output        HDMI_MCLK,
+	output        HDMI_BCK,
+	output        HDMI_LRCK,
+	output        HDMI_SDATA,
+`endif
+`ifdef SPDIF_AUDIO
+	output        SPDIF,
+`endif
+`ifdef USE_AUDIO_IN
+	input         AUDIO_IN,
+`endif
+	input         UART_RX,
+	output        UART_TX
+
 );
+
+`ifdef NO_DIRECT_UPLOAD
+localparam bit DIRECT_UPLOAD = 0;
+wire SPI_SS4 = 1;
+`else
+localparam bit DIRECT_UPLOAD = 1;
+`endif
+
+`ifdef USE_QSPI
+localparam bit QSPI = 1;
+assign QDAT = 4'hZ;
+`else
+localparam bit QSPI = 0;
+`endif
+
+`ifdef VGA_8BIT
+localparam VGA_BITS = 8;
+`else
+localparam VGA_BITS = 6;
+`endif
+
+`ifdef USE_HDMI
+localparam bit HDMI = 1;
+assign HDMI_RST = 1'b1;
+`else
+localparam bit HDMI = 0;
+`endif
+
+`ifdef BIG_OSD
+localparam bit BIG_OSD = 1;
+`define SEP "-;",
+`else
+localparam bit BIG_OSD = 0;
+`define SEP
+`endif
+
+// remove this if the 2nd chip is actually used
+`ifdef DUAL_SDRAM
+assign SDRAM2_A = 13'hZZZZ;
+assign SDRAM2_BA = 0;
+assign SDRAM2_DQML = 0;
+assign SDRAM2_DQMH = 0;
+assign SDRAM2_CKE = 0;
+assign SDRAM2_CLK = 0;
+assign SDRAM2_nCS = 1;
+assign SDRAM2_DQ = 16'hZZZZ;
+assign SDRAM2_nCAS = 1;
+assign SDRAM2_nRAS = 1;
+assign SDRAM2_nWE = 1;
+`endif
 
 `include "build_id.v"
 
@@ -50,6 +163,7 @@ localparam CONF_STR = {
 	"O7,Auto up,Off,On;",
 	"T8,Advance;",
 	"R1024,Save NVRAM;",
+	`SEP
 	"T0,Reset;",
 	"V,v1.0.",`BUILD_DATE
 };
@@ -206,13 +320,14 @@ assign LED = ~ioctl_downl;
 assign SDRAM_CLK = clk_mem;
 assign SDRAM_CKE = 1;
 
-wire clk_sys, clk_mem, clk_aud, clk_dac;
+wire clk_sys, clk_mem, clk_vid, clk_aud, clk_dac;
 wire pll_locked;
 pll_mist pll(
 	.inclk0(CLOCK_27),
 	.areset(0),
 	.c0(clk_mem),//96
 	.c1(clk_sys),//12
+	.c2(clk_vid),//48
 	.locked(pll_locked)
 	);
 
@@ -240,8 +355,20 @@ wire signed [8:0] mouse_y;
 wire  [7:0] mouse_flags;
 wire        mouse_idx;
 
+`ifdef USE_HDMI
+wire        i2c_start;
+wire        i2c_read;
+wire  [6:0] i2c_addr;
+wire  [7:0] i2c_subaddr;
+wire  [7:0] i2c_dout;
+wire  [7:0] i2c_din;
+wire        i2c_ack;
+wire        i2c_end;
+`endif
+
 user_io #(
-	.STRLEN($size(CONF_STR)>>3))
+	.STRLEN($size(CONF_STR)>>3),
+	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
 user_io(
 	.clk_sys        ( clk_sys          ),
 	.conf_str       ( CONF_STR         ),
@@ -254,6 +381,16 @@ user_io(
 	.scandoubler_disable (scandoublerD ),
 	.ypbpr          ( ypbpr            ),
 	.no_csync       ( no_csync         ),
+`ifdef USE_HDMI
+	.i2c_start      (i2c_start      ),
+	.i2c_read       (i2c_read       ),
+	.i2c_addr       (i2c_addr       ),
+	.i2c_subaddr    (i2c_subaddr    ),
+	.i2c_dout       (i2c_dout       ),
+	.i2c_din        (i2c_din        ),
+	.i2c_ack        (i2c_ack        ),
+	.i2c_end        (i2c_end        ),
+`endif
 	.core_mod       ( core_mod         ),
 	.key_strobe     ( key_strobe       ),
 	.key_pressed    ( key_pressed      ),
@@ -387,7 +524,7 @@ end
 wire  [7:0] audio;
 wire [15:0] speech;
 wire        hs, vs;
-wire        blankn;
+wire        hb, vb;
 wire  [2:0] r,g;
 wire  [1:0] b;
 
@@ -399,6 +536,8 @@ robotron_soc robotron_soc (
 	.vgaBlue     ( b           ),
 	.Hsync       ( hs          ),
 	.Vsync       ( vs          ),
+	.Hblank      ( hb          ),
+	.Vblank      ( vb          ),
 	.audio_out   ( audio       ),
 	.speech_out  ( speech      ),
 
@@ -433,8 +572,8 @@ robotron_soc robotron_soc (
 	.dl_wr       ( ioctl_wr && ioctl_index == 0 )
 );
 
-mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(11)) mist_video(
-	.clk_sys        ( clk_sys          ),
+mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD), .USE_BLANKS(1'b1)) mist_video(
+	.clk_sys        ( clk_vid          ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
@@ -443,6 +582,8 @@ mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(11)) mist_video(
 	.B              ( {b, b[1] }       ),
 	.HSync          ( hs               ),
 	.VSync          ( vs               ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
 	.VGA_R          ( VGA_R            ),
 	.VGA_G          ( VGA_G            ),
 	.VGA_B          ( VGA_B            ),
@@ -450,14 +591,61 @@ mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(11)) mist_video(
 	.VGA_HS         ( VGA_HS           ),
 	.rotate         ( {orientation[1],rotate} ),
 	.scandoubler_disable( scandoublerD ),
-	.ce_divider     ( 1'b1             ),
+	.ce_divider     ( 3'd3             ),
 	.no_csync       ( no_csync         ),
 	.scanlines      ( scanlines        ),
 	.blend          ( blend            ),
 	.ypbpr          ( ypbpr            )
 	);
 
-   
+`ifdef USE_HDMI
+
+i2c_master #(12_000_000) i2c_master (
+	.CLK         (clk_sys),
+
+	.I2C_START   (i2c_start),
+	.I2C_READ    (i2c_read),
+	.I2C_ADDR    (i2c_addr),
+	.I2C_SUBADDR (i2c_subaddr),
+	.I2C_WDATA   (i2c_dout),
+	.I2C_RDATA   (i2c_din),
+	.I2C_END     (i2c_end),
+	.I2C_ACK     (i2c_ack),
+
+	//I2C bus
+	.I2C_SCL     (HDMI_SCL),
+ 	.I2C_SDA     (HDMI_SDA)
+);
+
+mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(8), .BIG_OSD(BIG_OSD), .USE_BLANKS(1'b1), .VIDEO_CLEANER(1'b0)) hdmi_video(
+	.clk_sys        ( clk_vid          ),
+	.SPI_SCK        ( SPI_SCK          ),
+	.SPI_SS3        ( SPI_SS3          ),
+	.SPI_DI         ( SPI_DI           ),
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( {b, b[1] }       ),
+	.HSync          ( hs               ),
+	.VSync          ( vs               ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
+	.VGA_R          ( HDMI_R           ),
+	.VGA_G          ( HDMI_G           ),
+	.VGA_B          ( HDMI_B           ),
+	.VGA_VS         ( HDMI_VS          ),
+	.VGA_HS         ( HDMI_HS          ),
+	.VGA_DE         ( HDMI_DE          ),
+	.rotate         ( {orientation[1],rotate} ),
+	.scandoubler_disable( 1'b0         ),
+	.ce_divider     ( 3'd3             ),
+	.no_csync       ( 1'b1             ),
+	.scanlines      ( scanlines        ),
+	.blend          ( blend            ),
+	.ypbpr          ( 1'b0             )
+	);
+	assign HDMI_PCLK = clk_vid;
+`endif
+	
 wire [16:0] audio_aud = {1'b0, audio, 8'd0} + {1'b0, speech};
 wire [15:0] audio_mix = speech_en ? audio_aud[16:1] : {audio, 8'd0};
 wire [15:0] audio_mix2 = audio_mix >> 3;
@@ -474,6 +662,37 @@ dac(
 	.dac_i(audio_mix2),
 	.dac_o(dac_o)
 	);
+
+`ifdef I2S_AUDIO
+i2s i2s (
+	.reset(1'b0),
+	.clk(clk_dac),
+	.clk_rate(32'd98_280_000),
+	.sclk(I2S_BCK),
+	.lrclk(I2S_LRCK),
+	.sdata(I2S_DATA),
+	.left_chan({~audio_mix2[15], audio_mix2[14:0]}),
+	.right_chan({~audio_mix2[15], audio_mix2[14:0]})
+);
+`ifdef I2S_AUDIO_HDMI
+assign HDMI_MCLK = 0;
+always @(posedge clk_dac) begin
+	HDMI_BCK <= I2S_BCK;
+	HDMI_LRCK <= I2S_LRCK;
+	HDMI_SDATA <= I2S_DATA;
+end
+`endif
+`endif
+
+`ifdef SPDIF_AUDIO
+spdif spdif (
+	.rst_i(1'b0),
+	.clk_i(clk_dac),
+	.clk_rate_i(32'd98_280_000),
+	.spdif_o(SPDIF),
+	.sample_i({2{~audio_mix2[15], audio_mix2[14:0]}})
+);
+`endif
 
 // Sinistar controls
 reg sin_x;

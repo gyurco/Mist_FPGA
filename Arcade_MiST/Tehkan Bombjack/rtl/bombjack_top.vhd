@@ -266,8 +266,16 @@ begin
 	O_VIDEO_B			<= VideoB;
 	O_HSYNC				<= s_hsync_n;
 	O_VSYNC				<= s_vsync_n;
-	O_HBLANK				<= s_hblank;	
-	O_VBLANK			   <= s_vblank;		
+
+	process(clk_6M_en)
+	begin
+		if rising_edge(clk_6M_en) then
+			if (S_1H = '0' and S_2H = '1' and S_4H = '0' and S_8H = '1') then
+				O_HBLANK				<= s_hblank;	
+				O_VBLANK			   <= s_vblank;
+			end if;
+		end if;
+	end process;
 
 	----------------------------------------------------------------------------
 	-- concatenate some signals so we can pass them to modules as a logic vector

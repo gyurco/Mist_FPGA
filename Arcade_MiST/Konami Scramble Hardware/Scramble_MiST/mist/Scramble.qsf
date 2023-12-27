@@ -205,7 +205,7 @@ set_global_assignment -name VHDL_FILE ../rtl/scramble_pack.vhd
 set_global_assignment -name VHDL_FILE ../rtl/moonwar_dial.vhd
 set_global_assignment -name VHDL_FILE ../rtl/MULT18X18.vhd
 set_global_assignment -name VHDL_FILE ../rtl/i82c55.vhd
-set_global_assignment -name QIP_FILE ../rtl/pll.qip
+set_global_assignment -name QIP_FILE pll.qip
 set_global_assignment -name VHDL_FILE ../rtl/dpram.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv
 set_global_assignment -name VHDL_FILE ../rtl/spinner.vhd

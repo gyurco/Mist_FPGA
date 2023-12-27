@@ -154,7 +154,6 @@ architecture RTL of SCRAMBLE is
 
 begin
 
-  O_HBLANK <= hblank;
   O_VBLANK <= vblank;
 
   --
@@ -165,6 +164,9 @@ begin
   begin
     wait until rising_edge(CLK);
     if (ENA = '1') then
+      if hcnt(2 downto 0) = "001" then
+        O_HBLANK <= hblank;
+      end if;
       hcarry := (hcnt = "111111111");
       if hcarry then
         hcnt <= "010000000"; -- 080

@@ -230,7 +230,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/TimePilot84.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/TimePilot84_CPU.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/TimePilot84_SND.sv
 set_global_assignment -name QIP_FILE ../rtl/custom/tp84_custom.qip
-set_global_assignment -name VERILOG_FILE ../rtl/pll.v
+set_global_assignment -name QIP_FILE ../rtl/pll.qip
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv
 set_global_assignment -name QIP_FILE ../rtl/ram_rom/tp84_ram_rom.qip
 set_global_assignment -name QIP_FILE ../rtl/tp84_sound.qip

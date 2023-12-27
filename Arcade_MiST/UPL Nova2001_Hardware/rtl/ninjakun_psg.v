@@ -26,6 +26,7 @@ assign OD = psg1cs ? OD1 : OD0;
 
 reg [7:0] SA0, SB0, SC0; wire [7:0] S0x; wire [1:0] S0c;
 reg [7:0] SA1, SB1, SC1; wire [7:0] S1x; wire [1:0] S1c;
+reg [10:0] S0MUX, S1MUX;
 
 reg [3:0] encnt;
 reg ENA;
@@ -43,13 +44,13 @@ always @(posedge MCLK) begin
 	case (S0c)
 	2'd0: SA0 <= S0x;
 	2'd1: SB0 <= S0x;
-	2'd2: SC0 <= S0x;
+	2'd2: S0MUX <= SA0 + SB0 + S0x;
 	default:;
 	endcase
 	case (S1c)
 	2'd0: SA1 <= S1x;
 	2'd1: SB1 <= S1x;
-	2'd2: SC1 <= S1x;
+	2'd2: S1MUX <= SA1 + SB1 + S1x;
 	default:;
 	endcase
 end
@@ -110,7 +111,7 @@ YM2149 psg1(
 	.CLK(MCLK)
 );
 
-wire [11:0] SND = SA0+SB0+SC0+SA1+SB1+SC1;
-assign SNDO = {SND,SND[3:0]};
+wire [11:0] SND = S0MUX + S1MUX;
+assign SNDO = {SND,SND[11:8]};
 
 endmodule 

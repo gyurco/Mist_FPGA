@@ -27,7 +27,7 @@ module gyruss_lpf_medium(
 	input signed [15:0] in,
 	output signed [15:0] out);
 	
-	localparam div = 10'd220; //Sample at 49.152/220 = 223418Hz
+	localparam [9:0] div = 10'd220; //Sample at 49.152/220 = 223418Hz
 	
 	//Coefficients computed with Octave/Matlab/Online filter calculators.
 	//or with scipy.signal.bessel or similar tools
