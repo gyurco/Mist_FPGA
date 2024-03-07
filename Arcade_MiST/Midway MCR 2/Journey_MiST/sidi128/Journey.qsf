@@ -41,7 +41,7 @@
 # ========================
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
-set_global_assignment -name LAST_QUARTUS_VERSION "22.1std.2 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Lite Edition"
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:build_id.tcl"
 set_global_assignment -name SMART_RECOMPILE ON
 
@@ -434,5 +434,10 @@ set_global_assignment -name QIP_FILE ../../../../common/CPU/T80/T80.qip
 set_global_assignment -name VHDL_FILE ../../../../common/Sound/ym2149/vol_table_array.vhd
 set_global_assignment -name VHDL_FILE ../../../../common/Sound/ym2149/YM2149.vhd
 set_global_assignment -name QIP_FILE ../../../../common/mist/mist.qip
+set_global_assignment -name VHDL_FILE ../../../../common/Sound/diskimage_by_byte.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE ../../../../common/Sound/wave_sound.sv
+
+
+
 
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

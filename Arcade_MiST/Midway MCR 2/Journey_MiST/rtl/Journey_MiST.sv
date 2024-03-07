@@ -16,6 +16,8 @@
 //  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //============================================================================
 
+`default_nettype none
+
 module Journey_MiST(
 	input         CLOCK_27,
 `ifdef USE_CLOCK_50
@@ -167,6 +169,7 @@ localparam CONF_STR = {
 	"O5,Blend,Off,On;",
 	"O6,Service,Off,On;",
 	"R2048,Save NVRAM;",
+//	"S0U,WAVVHD,Cas Audio:;",
 	"T0,Reset;",
 	"V,v1.0.",`BUILD_DATE
 };
@@ -219,11 +222,23 @@ wire        i2c_ack;
 wire        i2c_end;
 `endif
 
+wire [31:0] sd_lba;
+wire sd_rd;
+wire sd_ack;
+wire sd_ack_conf;
+wire [7:0] sd_dout;
+wire sd_dout_strobe;
+wire img_mounted;
+wire [63:0] img_size;
+
 user_io #(
 	.STRLEN(($size(CONF_STR)>>3)),
-	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
+	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)),
+	.SD_IMAGES(1)
+	)
 user_io(
 	.clk_sys        (clk_sys        ),
+	.clk_sd         (clk_sys        ),
 	.conf_str       (CONF_STR       ),
 	.SPI_CLK        (SPI_SCK        ),
 	.SPI_SS_IO      (CONF_DATA0     ),
@@ -249,6 +264,23 @@ user_io(
 	.key_code       (key_code       ),
 	.joystick_0     (joystick_0     ),
 	.joystick_1     (joystick_1     ),
+
+	// SD CARD
+   .sd_lba         (sd_lba        ),
+	.sd_rd          (sd_rd         ),
+	.sd_wr          (1'b0 ),
+	.sd_ack         (sd_ack        ),
+	.sd_ack_conf    (sd_ack_conf   ),
+	.sd_conf        (1'b0 ),
+	.sd_sdhc        (1'b1 ),
+	.sd_dout        (sd_dout       ),
+	.sd_dout_strobe (sd_dout_strobe),
+	.sd_din         ( ),
+	.sd_din_strobe  ( ),
+	.sd_buff_addr   ( ),
+	.img_mounted    (img_mounted   ),
+	.img_size       (img_size      ),
+
 	.status         (status         )
 	);
 
@@ -358,6 +390,8 @@ wire        hs, vs, cs;
 wire        hb, vb;
 wire  [2:0] g, r, b;
 
+wire [7:0] output_4;
+
 journey journey(
 	.clock_40(clk_sys),
 	.reset(reset),
@@ -379,6 +413,8 @@ journey journey(
 	.input_2      ( input_2         ),
 	.input_3      ( input_3         ),
 	.input_4      ( input_4         ),
+	
+	.output_4     ( output_4        ),
 
 	.cpu_rom_addr ( rom_addr        ),
 	.cpu_rom_do   ( rom_addr[0] ? rom_do[15:8] : rom_do[7:0] ),
@@ -395,8 +431,10 @@ journey journey(
 
 wire vs_out;
 wire hs_out;
-assign VGA_HS = (~no_csync & scandoublerD & ~ypbpr)? cs : hs_out;
-assign VGA_VS = (~no_csync & scandoublerD & ~ypbpr)? 1'b1 : vs_out;
+always @(posedge clk_sys) begin
+	VGA_HS <= (~no_csync & scandoublerD & ~ypbpr)? cs : hs_out;
+	VGA_VS <= (~no_csync & scandoublerD & ~ypbpr)? 1'b1 : vs_out;
+end
 
 mist_video #(.COLOR_DEPTH(3), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys        ( clk_sys          ),
@@ -471,21 +509,99 @@ mist_video #(.COLOR_DEPTH(3), .OUT_COLOR_DEPTH(8), .USE_BLANKS(1'b1), .BIG_OSD(B
 
 `endif
 
+// Wave sound
+	
+wire wav_mounted;
+wire [31:0] wav_addr;
+wire wav_rd;
+wire wav_rd_next;
+wire [7:0] wav_d;
+wire wav_ack;
+
+assign wav_addr[31:28] = 4'h0;
+assign sd_lba[31:23] = 8'h00;
+
+// Bytewise interface to disk images
+diskimage_by_byte waveinterface (
+	.clk(clk_sys),
+	.reset_n(~reset),
+
+	.sd_lba(sd_lba),
+	.sd_rd(sd_rd),
+	.sd_ack(sd_ack),
+	.sd_d(sd_dout),
+	.sd_d_strobe(sd_dout_strobe),
+	.sd_imgsize(img_size),
+	.sd_imgmounted(img_mounted),
+
+	.client_mounted(wav_mounted),
+	.client_addr(wav_addr),
+	.client_rd(wav_rd),
+	.client_rd_next(wav_rd_next),
+	.client_q(wav_d),
+	.client_ack(wav_ack)
+);
+
+// Wave player
+
+wire [15:0] wav_out_l;
+wire [15:0] wav_out_r;
+
+wire playing;
+
+assign playing = wav_mounted && output_4[0];
+
+wave_sound #(.SYSCLOCK(40000000)) waveplayer
+(
+	.I_CLK(clk_sys),
+	.I_RST(reset | img_mounted),
+
+	.I_BASE_ADDR(0),
+	.I_LOOP(1'b1),
+	.I_PAUSE(~playing),
+	
+	.O_ADDR(wav_addr),
+	.O_READ(wav_rd),
+	.O_READNEXT(wav_rd_next),
+	.I_DATA(wav_d),
+	.I_READY(wav_ack),
+
+	.O_PCM_L(wav_out_l),
+	.O_PCM_R(wav_out_r)
+);
+
+
+reg [16:0] audio_l_sum;
+reg [16:0] audio_r_sum;
+
+reg [16:0] dac_in_l;
+reg [16:0] dac_in_r;
+
+always @(posedge clk_sys) begin
+
+	audio_l_sum <= {wav_out_l[15],wav_out_l} + {audiol,1'b0} - 16'h4000;
+	audio_r_sum <= {wav_out_r[15],wav_out_r} + {audior,1'b0} - 16'h4000;
+
+	dac_in_l <= {~audio_l_sum[16],audio_l_sum[15:0]}; // Convert to unsigned 17-bit
+	dac_in_r <= {~audio_r_sum[16],audio_r_sum[15:0]};
+end
+
+
 dac #(
-	.C_bits(16))
+	.C_bits(17))
 dac_l(
 	.clk_i(clk_sys),
 	.res_n_i(1),
-	.dac_i(audiol),
+	.dac_i(dac_in_l),
 	.dac_o(AUDIO_L)
 	);
 
 dac #(
-	.C_bits(16))
+	.C_bits(17))
 dac_r(
 	.clk_i(clk_sys),
 	.res_n_i(1),
-	.dac_i(audior),
+	.dac_i(dac_in_r),
 	.dac_o(AUDIO_R)
 	);	
 
@@ -497,8 +613,8 @@ i2s i2s (
 	.sclk(I2S_BCK),
 	.lrclk(I2S_LRCK),
 	.sdata(I2S_DATA),
-	.left_chan({2'd0, audiol[15:2]}),
-	.right_chan({2'd0, audior[15:2]})
+	.left_chan(audio_l_sum[16:1]),
+	.right_chan(audio_r_sum[16:1])
 );
 `ifdef I2S_AUDIO_HDMI
 assign HDMI_MCLK = 0;
