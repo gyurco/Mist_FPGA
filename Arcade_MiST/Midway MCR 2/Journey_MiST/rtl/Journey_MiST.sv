@@ -632,7 +632,7 @@ spdif spdif (
 	.clk_i(clk_sys),
 	.clk_rate_i(32'd40_000_000),
 	.spdif_o(SPDIF),
-	.sample_i({2'd0, audior[15:2], 2'd0, audiol[15:2]})
+	.sample_i({audio_r_sum[16:1], audio_l_sum[16:1]})
 );
 `endif
 
