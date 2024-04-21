@@ -78,6 +78,7 @@ entity SCRAMBLE is
     --
     rom_addr              : out   std_logic_vector(14 downto 0);
     rom_dout              : in    std_logic_vector( 7 downto 0);
+    rom_oe                : out   std_logic;
     --
     dl_addr               : in    std_logic_vector(15 downto 0);
     dl_wr                 : in    std_logic;
@@ -115,6 +116,7 @@ architecture RTL of SCRAMBLE is
     signal cpu_addr         : std_logic_vector(15 downto 0);
     signal cpu_data_out     : std_logic_vector(7 downto 0);
     signal cpu_data_in      : std_logic_vector(7 downto 0);
+    signal romsel           : std_logic;
 
     signal page_4to7_l      : std_logic;
 
@@ -634,9 +636,19 @@ begin
     end if;
   end process;
 
-  p_cpu_data_in_mux : process(I_HWSEL, cpu_addr, cpu_rd_l, cpu_mreq_l, cpu_rfsh_l, ram_dout, rom_dout, vramrd_l, vram_data, I_DATA_OE_L, I_DATA )
+  rom_oe <= '1' when romsel = '1' and (cpu_mreq_l = '0') and (cpu_rfsh_l = '1') else '0';
+
+  p_cpu_data_in_mux : process(I_HWSEL, cpu_addr, cpu_rd_l, cpu_mreq_l, cpu_rfsh_l, ram_dout, rom_dout, vramrd_l, vram_data, I_DATA_OE_L, I_DATA, romsel )
     variable ram_addr : std_logic_vector(1 downto 0);
   begin
+
+    if I_HWSEL = I_HWSEL_MIMONKEY and (cpu_addr(15 downto 14) = "11" or cpu_addr(15 downto 14) = "00") and (cpu_rd_l = '0') then
+      romsel <= '1';
+    elsif (cpu_addr(15) = '0') and I_HWSEL /= I_HWSEL_MIMONKEY and ((I_HWSEL /= I_HWSEL_SCRAMBLE and I_HWSEL /= I_HWSEL_MARS) or cpu_addr(14) = '0') and (cpu_rd_l = '0') then
+      romsel <= '1';
+    else
+      romsel <= '0';
+    end if;
 
     if I_HWSEL = I_HWSEL_SCRAMBLE or I_HWSEL = I_HWSEL_MARS or I_HWSEL = I_HWSEL_MIMONKEY then
       ram_addr := "01";
@@ -652,9 +664,7 @@ begin
       cpu_data_in <= I_DATA;
     --
     elsif (cpu_mreq_l = '0') and (cpu_rfsh_l = '1') then
-      if I_HWSEL = I_HWSEL_MIMONKEY and (cpu_addr(15 downto 14) = "11" or cpu_addr(15 downto 14) = "00") and (cpu_rd_l = '0') then
-        cpu_data_in <= rom_dout;
-      elsif (cpu_addr(15) = '0') and I_HWSEL /= I_HWSEL_MIMONKEY and ((I_HWSEL /= I_HWSEL_SCRAMBLE and I_HWSEL /= I_HWSEL_MARS) or cpu_addr(14) = '0') and (cpu_rd_l = '0') then
+      if romsel = '1' then
         cpu_data_in <= rom_dout;
       --
       elsif (cpu_addr(15 downto 14) = ram_addr) then

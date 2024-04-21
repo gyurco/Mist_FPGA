@@ -151,6 +151,7 @@ localparam bit BIG_OSD = 0;
 `endif
 
 // remove this if the 2nd chip is actually used
+/*
 `ifdef DUAL_SDRAM
 assign SDRAM2_A = 13'hZZZZ;
 assign SDRAM2_BA = 0;
@@ -164,7 +165,7 @@ assign SDRAM2_nCAS = 1;
 assign SDRAM2_nRAS = 1;
 assign SDRAM2_nWE = 1;
 `endif
-
+*/
 `include "build_id.v"
 
 `define CORE_NAME "SCRAMBLE"
@@ -173,6 +174,10 @@ wire [6:0] core_mod;
 localparam CONF_STR = {
 	`CORE_NAME, ";ROM;",
 	"O2,Rotate Controls,Off,On;",
+`ifdef DUAL_SDRAM
+	"OGH,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"OI,Rotation filter,Off,On;",
+`endif
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blending,Off,On;",
 	"O6,Joystick Swap,Off,On;",
@@ -191,8 +196,8 @@ reg  [1:0] orientation;
 
 always @(*) begin
 	orientation = 2'b11; // portrait, left
-	input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_fireA, /*service*/1'b0, m_fireB, m_up2 };
-	input1 = ~{ m_one_player, m_two_players, m_left2, m_right2, m_fire2A, m_fire2B, /*lives*/~status[8:7] };
+	input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_fire1[0], /*service*/1'b0, m_fire1[1], m_up2 };
+	input1 = ~{ m_one_player, m_two_players, m_left2, m_right2, m_fire2[0], m_fire2[1], /*lives*/~status[8:7] };
 	input2 = ~{ 1'b1, m_down, 1'b1, m_up, /*cabinet*/1'b1, /*coinage*/2'b11, m_down2 };
 
 	case (core_mod)
@@ -219,8 +224,8 @@ always @(*) begin
 		7'h4: // TAZMANIA
 		begin
 			hwsel = 2;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, m_fireA, m_fireB };
-			input1 = ~{ m_fire2A, m_fire2B, m_left2, m_right2, m_up2, m_down2, /*demosnd*/status[10], /*lives35*/status[7] };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, m_fire1[0], m_fire1[1] };
+			input1 = ~{ m_fire2[0], m_fire2[1], m_left2, m_right2, m_up2, m_down2, /*demosnd*/status[10], /*lives35*/status[7] };
 			input2 = ~{ 1'b1, m_two_players, 2'b10, 3'b111, m_one_player }; // unknown, start2, 2xunknown, cabinet, 2xcoinage, start1
 		end
 		7'h5: // ARMORCAR
@@ -233,7 +238,7 @@ always @(*) begin
 		begin
 			hwsel = 2;
 			input0 = ~{ m_coin1, m_coin2, 1'b0, dial };
-			input1 = ~{ m_fireA, m_fireB, m_fireC, m_fireD, m_two_players, m_one_player, /*live345*/~status[8:7] };
+			input1 = ~{ m_fire1[0], m_fire1[1], m_fire1[2], m_fire1[3], m_two_players, m_one_player, /*live345*/~status[8:7] };
 			input2 = ~{ 4'h0, 1'b1, 2'b11, 1'b0 }; // 4xunused, cabinet, coinage, p2fire(cocktail)
 		end
 		7'h7: // SPDCOIN
@@ -246,37 +251,37 @@ always @(*) begin
 		7'h8: // CALIPSO
 		begin
 			hwsel = 3;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, 1'b1, m_two_players|m_fire2A }; // coin1, coin2, left, right, down, up, unused, start 2p / player2 fire
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, 1'b1, m_two_players|m_fire2[0] }; // coin1, coin2, left, right, down, up, unused, start 2p / player2 fire
 			input1 = ~{ 1'b1, 1'b1, m_left2, m_right2, m_down2, m_up2, status[10], status[7] };          // unused, unused, left, right, down, up, demo sounds, lives 3/5
-			input2 = ~{ 5'b0, 2'b10, m_fireA | m_one_player };                                           // unused[7:3], coin dip[2:1], start 1p / player1 fire
+			input2 = ~{ 5'b0, 2'b10, m_fire1[0] | m_one_player };                                           // unused[7:3], coin dip[2:1], start 1p / player1 fire
 		end
 		7'h9: // DARKPLNT
 		begin
 			hwsel = 4;
-			input0 = ~{ m_coin1, m_coin2, 3'b000, m_two_players | m_fireB, m_one_player | m_fireA, m_fireC };
+			input0 = ~{ m_coin1, m_coin2, 3'b000, m_two_players | m_fire1[1], m_one_player | m_fire1[0], m_fire1[2] };
 			input1 = { darkplnt_dial_scrambled, /*lives*/status[7], /*bonus*/1'b0 };
 			input2 = { /*unk*/4'hf, /*bonus life*/1'b0, /*coinage*/ 2'b10, /*unk*/1'b1 };
 		end
 		7'hA: // ANTEATER
 		begin
 			hwsel = 6;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, m_fireA, m_fireB };
-			input1 = ~{ m_fire2A, m_fire2B, m_left2, m_right2, m_up2, m_down2, /*demosdns*/status[10], /*lives35*/status[7] };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, m_fire1[0], m_fire1[1] };
+			input1 = ~{ m_fire2[0], m_fire2[1], m_left2, m_right2, m_up2, m_down2, /*demosdns*/status[10], /*lives35*/status[7] };
 			input2 = ~{ 1'b1, m_two_players, 2'b10, 3'b111, m_one_player };
 		end
 		7'hB: // LOSTTOMB
 		begin
 			hwsel = 7;
 			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, m_one_player, m_two_players };
-			input1 = ~{ 1'b0, m_fireA, m_left2, m_right2, m_down2, m_up2, /*lives35/free play/invulnerability*/~(status[8:7]+1'd1) };
+			input1 = ~{ 1'b0, m_fire1[0], m_left2, m_right2, m_down2, m_up2, /*lives35/free play/invulnerability*/~(status[8:7]+1'd1) };
 			input2 = ~{ 4'h0, status[10], 2'b10, 1'b0 }; //4xunused, demo sounds, 2xcoinage, unused
 		end
 		7'hC: // MARS
 		begin
 			hwsel = 10;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_left2 | m_fireA, m_right2 | m_fireB, 1'b0, 1'b0 };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_left2 | m_fire1[0] | m_leftB, m_right2 | m_fire1[1] | m_rightB, 1'b0, 1'b0 };
 			input1 = ~{ m_one_player, m_two_players, 4'h0, /*coinage*/2'b11 };
-			input2 = ~{ m_up2 | m_fireC, m_down, m_down2 | m_fireD, m_up, /*lives*/status[7], /*unk*/1'b0, /*cabinet*/1'b1, 1'b0 };
+			input2 = ~{ m_up2 | m_fire1[2] | m_upB, m_down, m_down2 | m_fire1[3] | m_downB, m_up, /*lives*/status[7], /*unk*/1'b0, /*cabinet*/1'b1, 1'b0 };
 		end
 		7'hD: // ATLANTIS
 		begin
@@ -288,29 +293,29 @@ always @(*) begin
 		begin
 			hwsel = 5;
 			orientation = 2'b10;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_fireA, 1'b0, m_fireB, m_up2 };
-			input1 = ~{ m_one_player, m_two_players, m_left2, m_right2, m_fire2A, m_fire2B, ~status[8:7] };
-			input2 = ~{ m_fire2C, m_down, m_fireC, m_up, /*upright*/1'b1, /*coinage*/2'b00, m_down2 };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_fire1[0], 1'b0, m_fire1[1], m_up2 };
+			input1 = ~{ m_one_player, m_two_players, m_left2, m_right2, m_fire2[0], m_fire2[1], ~status[8:7] };
+			input2 = ~{ m_fire2[2], m_down, m_fire1[2], m_up, /*upright*/1'b1, /*coinage*/2'b00, m_down2 };
 		end
 		7'hF: // TURTLES
 		begin
 			hwsel = 11;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_fireA, 1'b0, 1'b0, m_up2 };
-			input1 = ~{ m_one_player, m_two_players, m_left2, m_right2, m_fire2A, 1'b0, ~status[8:7] };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_fire1[0], 1'b0, 1'b0, m_up2 };
+			input1 = ~{ m_one_player, m_two_players, m_left2, m_right2, m_fire2[0], 1'b0, ~status[8:7] };
 			input2 = ~{ 1'b0, m_down, 1'b0, m_up, /*upright*/1'b1, /*coinage*/2'b00, m_down2 };
 		end
 		7'h10: // MINEFLD
 		begin
 			hwsel = 8;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, /*start level*/status[11], m_fireA };
-			input1 = ~{ /*2xunk*/2'b00, m_left2, m_right2, m_down2, m_up2, /*demosnd*/status[10], /*lives35*/status[7] };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, /*start level*/status[11], m_fire1[0] };
+			input1 = ~{ /*2xunk*/2'b00, m_left2 | m_leftB, m_right2 | m_rightB, m_down2 | m_downB, m_up2 | m_upB, /*demosnd*/status[10], /*lives35*/status[7] };
 			input2 = ~{ /*unk*/1'b0, m_two_players, /*2xunk*/2'b00, /*difficulty*/status[9:8], /*coinage*/1'b0, m_one_player };
 		end
 		7'h11: // RESCUE
 		begin
 			hwsel = 9;
-			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, /*start level*/status[9], m_fireA };
-			input1 = ~{ /*2xunk*/2'b00, m_left2, m_right2, m_down2, m_up2, /*demosnd*/status[10], /*lives35*/status[7] };
+			input0 = ~{ m_coin1, m_coin2, m_left, m_right, m_down, m_up, /*start level*/status[9], m_fire1[0] };
+			input1 = ~{ /*2xunk*/2'b00, m_left2 | m_leftB, m_right2 | m_rightB, m_down2 | m_downB, m_up2 | m_upB, /*demosnd*/status[10], /*lives35*/status[7] };
 			input2 = ~{ /*unk*/1'b0, m_two_players, /*2xunk*/2'b00, /*difficulty*/~status[8], /*coinage*/2'b11, m_one_player };
 		end
 		7'h12: // MIMONKEY
@@ -331,24 +336,38 @@ always @(*) begin
 end
 
 wire       rotate    = status[2];
+wire [1:0] rotate_screen = status[17:16];
+wire       rotate_filter = status[18];
 wire [1:0] scanlines = status[4:3];
 wire       blend     = status[5];
 wire       joyswap   = status[6];
 
 assign LED = ~ioctl_downl;
 assign AUDIO_R = AUDIO_L;
-assign SDRAM_CLK = clk_sys;
+assign SDRAM_CLK = clk_vid;
 assign SDRAM_CKE = 1;
 
 wire clk_sys;
-wire clk_hdmi;
+wire clk_vid;
 wire pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
 	.areset(0),
-	.c0(clk_sys),
+	.c0(clk_vid),
+	.c1(clk_sys),
 	.locked(pll_locked)
 	);
+
+`ifdef DUAL_SDRAM
+wire pll2_locked;
+pll pll2(
+	.inclk0(CLOCK_27),
+	.areset(0),
+	.c0(SDRAM2_CLK),
+	.locked(pll2_locked)
+	);
+assign SDRAM2_CKE = 1;
+`endif
 
 // reset generation
 reg reset = 1;
@@ -383,8 +402,8 @@ end
 wire [31:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
-wire  [7:0] joystick_0;
-wire  [7:0] joystick_1;
+wire [31:0] joystick_0;
+wire [31:0] joystick_1;
 wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
@@ -469,14 +488,15 @@ data_io data_io(
 	.ioctl_dout    ( ioctl_dout   )
 );
 
-reg      port1_req;
-reg [15:0] rom_dout;
-reg [14:0] rom_addr;
+reg         port1_req;
+wire [15:0] rom_dout;
+wire [14:0] rom_addr;
+wire        rom_oe;
 
-sdram #(.MHZ(24)) sdram(
+sdram #(.MHZ(48)) sdram(
 	.*,
 	.init_n        ( pll_locked   ),
-	.clk           ( clk_sys      ),
+	.clk           ( clk_vid      ),
 
 	// ROM upload
 	.port1_req     ( port1_req    ),
@@ -506,7 +526,6 @@ wire  [9:0] audio;
 wire        hs, vs;
 wire        hb, vb;
 wire  [5:0] r,b,g;
-wire        VGA_HB, VGA_VB;
 
 scramble_top scramble(
 	.O_VIDEO_R(r),
@@ -530,14 +549,16 @@ scramble_top scramble(
 
 	.rom_addr(rom_addr),
 	.rom_dout(rom_addr[0] ? rom_dout[15:8] : rom_dout[7:0]),
+	.rom_oe(rom_oe),
 
 	.dl_addr(ioctl_addr[15:0]),
 	.dl_wr(ioctl_wr),
 	.dl_data(ioctl_dout)
 	);
 
-mist_video #(.COLOR_DEPTH(6),.SD_HCNT_WIDTH(10),.USE_BLANKS(1),.OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD)) mist_video(
-	.clk_sys(clk_sys),
+mist_dual_video #(.COLOR_DEPTH(6),.SD_HCNT_WIDTH(10),.USE_BLANKS(1),.OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD)) mist_video(
+	.clk_sys(clk_vid),
+	.ce_divider(4'h7),
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
@@ -553,11 +574,32 @@ mist_video #(.COLOR_DEPTH(6),.SD_HCNT_WIDTH(10),.USE_BLANKS(1),.OUT_COLOR_DEPTH(
 	.VGA_B(VGA_B),
 	.VGA_VS(VGA_VS),
 	.VGA_HS(VGA_HS),
-	.VGA_VB(VGA_VB),
-	.VGA_HB(VGA_HB),
+`ifdef USE_HDMI
+	.HDMI_R(HDMI_R),
+	.HDMI_G(HDMI_G),
+	.HDMI_B(HDMI_B),
+	.HDMI_VS(HDMI_VS),
+	.HDMI_HS(HDMI_HS),
+	.HDMI_DE(HDMI_DE),
+`endif
+`ifdef DUAL_SDRAM
+	.clk_sdram(clk_vid),
+	.sdram_init(~pll2_locked),
+	.SDRAM_A(SDRAM2_A),
+	.SDRAM_DQ(SDRAM2_DQ),
+	.SDRAM_DQML(SDRAM2_DQML),
+	.SDRAM_DQMH(SDRAM2_DQMH),
+	.SDRAM_nWE(SDRAM2_nWE),
+	.SDRAM_nCAS(SDRAM2_nCAS),
+	.SDRAM_nRAS(SDRAM2_nRAS),
+	.SDRAM_nCS(SDRAM2_nCS),
+	.SDRAM_BA(SDRAM2_BA),
+`endif
 	.no_csync(no_csync),
 	.rotate({1'b1,rotate}),
-	.ce_divider(1'b1),
+	.rotate_screen(rotate_screen),
+	.rotate_hfilter(rotate_filter),
+	.rotate_vfilter(rotate_filter),
 	.blend(blend),
 	.scandoubler_disable(scandoublerD),
 	.scanlines(scanlines),
@@ -582,33 +624,6 @@ i2c_master #(24_000_000) i2c_master (
 	.I2C_SCL     (HDMI_SCL),
  	.I2C_SDA     (HDMI_SDA)
 );
-
-mist_video #(.COLOR_DEPTH(6),.SD_HCNT_WIDTH(10),.USE_BLANKS(1),.OUT_COLOR_DEPTH(8),.VIDEO_CLEANER(1),.BIG_OSD(BIG_OSD)) hdmi_video(
-	.clk_sys(clk_sys),
-	.SPI_SCK(SPI_SCK),
-	.SPI_SS3(SPI_SS3),
-	.SPI_DI(SPI_DI),
-	.HBlank(hb),
-	.VBlank(vb),
-	.R(r),
-	.G(g),
-	.B(b),
-	.HSync(~hs),
-	.VSync(~vs),
-	.VGA_R(HDMI_R),
-	.VGA_G(HDMI_G),
-	.VGA_B(HDMI_B),
-	.VGA_VS(HDMI_VS),
-	.VGA_HS(HDMI_HS),
-	.VGA_DE(HDMI_DE),
-	.no_csync(1'b1),
-	.rotate({1'b1,rotate}),
-	.ce_divider(1'b1),
-	.blend(blend),
-	.scandoubler_disable(1'b0),
-	.scanlines(scanlines),
-	.ypbpr(1'b0)
-	);
 
 assign HDMI_PCLK = clk_sys;
 
@@ -684,9 +699,10 @@ wire [5:0] dp_remap[64] =
 
 wire [5:0] darkplnt_dial_scrambled = dp_remap[darkplnt_dial[6:1]];
 
-wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
-wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;
+wire m_up, m_down, m_left, m_right, m_upB, m_downB, m_leftB, m_rightB;
+wire m_up2, m_down2, m_left2, m_right2, m_upB2, m_downB2, m_leftB2, m_rightB2;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
+wire [11:0] m_fire1, m_fire2;
 
 arcade_inputs inputs (
 	.clk         ( clk_sys     ),
@@ -696,12 +712,12 @@ arcade_inputs inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( orientation ),
+	.orientation ( orientation ^ {1'b0, |rotate_screen} ),
 	.joyswap     ( joyswap     ),
 	.oneplayer   ( 1'b0        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),
-	.player1     ( {m_fireF, m_fireE, m_fireD, m_fireC, m_fireB, m_fireA, m_up, m_down, m_left, m_right} ),
-	.player2     ( {m_fire2F, m_fire2E, m_fire2D, m_fire2C, m_fire2B, m_fire2A, m_up2, m_down2, m_left2, m_right2} )
+	.player1     ( {m_upB, m_downB, m_leftB, m_rightB, m_fire1, m_up, m_down, m_left, m_right} ),
+	.player2     ( {m_upB2, m_downB2, m_leftB2, m_rightB2, m_fire2, m_up2, m_down2, m_left2, m_right2} )
 );
 
 

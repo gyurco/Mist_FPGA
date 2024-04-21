@@ -72,6 +72,7 @@ port (
 
 	rom_addr         : out std_logic_vector(14 downto 0);
 	rom_dout         : in  std_logic_vector( 7 downto 0);
+	rom_oe           : out std_logic;
 
 	dl_addr          : in  std_logic_vector(15 downto 0);
 	dl_wr            : in  std_logic;
@@ -133,6 +134,7 @@ port map (
 	--
 	rom_addr              => rom_addr,
 	rom_dout              => rom_dout,
+	rom_oe                => rom_oe,
 	--
 	dl_addr               => dl_addr,
 	dl_wr                 => dl_wr,
