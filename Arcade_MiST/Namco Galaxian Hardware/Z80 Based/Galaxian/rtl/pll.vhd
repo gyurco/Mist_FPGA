@@ -48,7 +48,8 @@ ENTITY pll IS
 		c1		: OUT STD_LOGIC ;
 		c2		: OUT STD_LOGIC ;
 		c3		: OUT STD_LOGIC ;
-		c4		: OUT STD_LOGIC 
+		c4		: OUT STD_LOGIC ;
+		locked		: OUT STD_LOGIC 
 	);
 END pll;
 
@@ -62,9 +63,10 @@ ARCHITECTURE SYN OF pll IS
 	SIGNAL sub_wire4	: STD_LOGIC ;
 	SIGNAL sub_wire5	: STD_LOGIC ;
 	SIGNAL sub_wire6	: STD_LOGIC ;
-	SIGNAL sub_wire7	: STD_LOGIC_VECTOR (1 DOWNTO 0);
-	SIGNAL sub_wire8_bv	: BIT_VECTOR (0 DOWNTO 0);
-	SIGNAL sub_wire8	: STD_LOGIC_VECTOR (0 DOWNTO 0);
+	SIGNAL sub_wire7	: STD_LOGIC ;
+	SIGNAL sub_wire8	: STD_LOGIC_VECTOR (1 DOWNTO 0);
+	SIGNAL sub_wire9_bv	: BIT_VECTOR (0 DOWNTO 0);
+	SIGNAL sub_wire9	: STD_LOGIC_VECTOR (0 DOWNTO 0);
 
 
 
@@ -139,41 +141,44 @@ ARCHITECTURE SYN OF pll IS
 		port_extclk1		: STRING;
 		port_extclk2		: STRING;
 		port_extclk3		: STRING;
+		self_reset_on_loss_lock		: STRING;
 		width_clock		: NATURAL
 	);
 	PORT (
 			areset	: IN STD_LOGIC ;
 			clk	: OUT STD_LOGIC_VECTOR (4 DOWNTO 0);
-			inclk	: IN STD_LOGIC_VECTOR (1 DOWNTO 0)
+			inclk	: IN STD_LOGIC_VECTOR (1 DOWNTO 0);
+			locked	: OUT STD_LOGIC 
 	);
 	END COMPONENT;
 
 BEGIN
-	sub_wire8_bv(0 DOWNTO 0) <= "0";
-	sub_wire8    <= To_stdlogicvector(sub_wire8_bv);
-	sub_wire5    <= sub_wire0(4);
-	sub_wire4    <= sub_wire0(2);
-	sub_wire3    <= sub_wire0(0);
-	sub_wire2    <= sub_wire0(3);
+	sub_wire9_bv(0 DOWNTO 0) <= "0";
+	sub_wire9    <= To_stdlogicvector(sub_wire9_bv);
+	sub_wire5    <= sub_wire0(3);
+	sub_wire4    <= sub_wire0(4);
+	sub_wire3    <= sub_wire0(2);
+	sub_wire2    <= sub_wire0(0);
 	sub_wire1    <= sub_wire0(1);
 	c1    <= sub_wire1;
-	c3    <= sub_wire2;
-	c0    <= sub_wire3;
-	c2    <= sub_wire4;
-	c4    <= sub_wire5;
-	sub_wire6    <= inclk0;
-	sub_wire7    <= sub_wire8(0 DOWNTO 0) & sub_wire6;
+	c0    <= sub_wire2;
+	c2    <= sub_wire3;
+	c4    <= sub_wire4;
+	c3    <= sub_wire5;
+	locked    <= sub_wire6;
+	sub_wire7    <= inclk0;
+	sub_wire8    <= sub_wire9(0 DOWNTO 0) & sub_wire7;
 
 	altpll_component : altpll
 	GENERIC MAP (
 		bandwidth_type => "AUTO",
 		clk0_divide_by => 9,
 		clk0_duty_cycle => 50,
-		clk0_multiply_by => 8,
+		clk0_multiply_by => 16,
 		clk0_phase_shift => "0",
-		clk1_divide_by => 3,
+		clk1_divide_by => 9,
 		clk1_duty_cycle => 50,
-		clk1_multiply_by => 2,
+		clk1_multiply_by => 8,
 		clk1_phase_shift => "0",
 		clk2_divide_by => 9,
 		clk2_duty_cycle => 50,
@@ -204,7 +209,7 @@ BEGIN
 		port_fbin => "PORT_UNUSED",
 		port_inclk0 => "PORT_USED",
 		port_inclk1 => "PORT_UNUSED",
-		port_locked => "PORT_UNUSED",
+		port_locked => "PORT_USED",
 		port_pfdena => "PORT_UNUSED",
 		port_phasecounterselect => "PORT_UNUSED",
 		port_phasedone => "PORT_UNUSED",
@@ -235,12 +240,14 @@ BEGIN
 		port_extclk1 => "PORT_UNUSED",
 		port_extclk2 => "PORT_UNUSED",
 		port_extclk3 => "PORT_UNUSED",
+		self_reset_on_loss_lock => "OFF",
 		width_clock => 5
 	)
 	PORT MAP (
 		areset => areset,
-		inclk => sub_wire7,
-		clk => sub_wire0
+		inclk => sub_wire8,
+		clk => sub_wire0,
+		locked => sub_wire6
 	);
 
 
@@ -276,8 +283,8 @@ END SYN;
 -- Retrieval info: PRIVATE: DUTY_CYCLE2 STRING "50.00000000"
 -- Retrieval info: PRIVATE: DUTY_CYCLE3 STRING "50.00000000"
 -- Retrieval info: PRIVATE: DUTY_CYCLE4 STRING "50.00000000"
--- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "24.000000"
--- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "18.000000"
+-- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "48.000000"
+-- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "24.000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE2 STRING "12.000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE3 STRING "6.000000"
 -- Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE4 STRING "48.000000"
@@ -296,7 +303,7 @@ END SYN;
 -- Retrieval info: PRIVATE: INCLK1_FREQ_UNIT_COMBO STRING "MHz"
 -- Retrieval info: PRIVATE: INTENDED_DEVICE_FAMILY STRING "Cyclone III"
 -- Retrieval info: PRIVATE: INT_FEEDBACK__MODE_RADIO STRING "1"
--- Retrieval info: PRIVATE: LOCKED_OUTPUT_CHECK STRING "0"
+-- Retrieval info: PRIVATE: LOCKED_OUTPUT_CHECK STRING "1"
 -- Retrieval info: PRIVATE: LONG_SCAN_RADIO STRING "1"
 -- Retrieval info: PRIVATE: LVDS_MODE_DATA_RATE STRING "Not Available"
 -- Retrieval info: PRIVATE: LVDS_MODE_DATA_RATE_DIRTY NUMERIC "0"
@@ -317,15 +324,15 @@ END SYN;
 -- Retrieval info: PRIVATE: MULT_FACTOR3 NUMERIC "2"
 -- Retrieval info: PRIVATE: MULT_FACTOR4 NUMERIC "16"
 -- Retrieval info: PRIVATE: NORMAL_MODE_RADIO STRING "1"
--- Retrieval info: PRIVATE: OUTPUT_FREQ0 STRING "24.00000000"
--- Retrieval info: PRIVATE: OUTPUT_FREQ1 STRING "18.00000000"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ0 STRING "48.00000000"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ1 STRING "24.00000000"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ2 STRING "12.00000000"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ3 STRING "6.00000000"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ4 STRING "100.00000000"
--- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE0 STRING "0"
--- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE1 STRING "0"
--- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE2 STRING "0"
--- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE3 STRING "0"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE0 STRING "1"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE1 STRING "1"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE2 STRING "1"
+-- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE3 STRING "1"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_MODE4 STRING "0"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT0 STRING "MHz"
 -- Retrieval info: PRIVATE: OUTPUT_FREQ_UNIT1 STRING "MHz"
@@ -390,11 +397,11 @@ END SYN;
 -- Retrieval info: CONSTANT: BANDWIDTH_TYPE STRING "AUTO"
 -- Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "9"
 -- Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
--- Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "8"
+-- Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "16"
 -- Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
--- Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "3"
+-- Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "9"
 -- Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "50"
--- Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "2"
+-- Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "8"
 -- Retrieval info: CONSTANT: CLK1_PHASE_SHIFT STRING "0"
 -- Retrieval info: CONSTANT: CLK2_DIVIDE_BY NUMERIC "9"
 -- Retrieval info: CONSTANT: CLK2_DUTY_CYCLE NUMERIC "50"
@@ -424,7 +431,7 @@ END SYN;
 -- Retrieval info: CONSTANT: PORT_FBIN STRING "PORT_UNUSED"
 -- Retrieval info: CONSTANT: PORT_INCLK0 STRING "PORT_USED"
 -- Retrieval info: CONSTANT: PORT_INCLK1 STRING "PORT_UNUSED"
--- Retrieval info: CONSTANT: PORT_LOCKED STRING "PORT_UNUSED"
+-- Retrieval info: CONSTANT: PORT_LOCKED STRING "PORT_USED"
 -- Retrieval info: CONSTANT: PORT_PFDENA STRING "PORT_UNUSED"
 -- Retrieval info: CONSTANT: PORT_PHASECOUNTERSELECT STRING "PORT_UNUSED"
 -- Retrieval info: CONSTANT: PORT_PHASEDONE STRING "PORT_UNUSED"
@@ -455,6 +462,7 @@ END SYN;
 -- Retrieval info: CONSTANT: PORT_extclk1 STRING "PORT_UNUSED"
 -- Retrieval info: CONSTANT: PORT_extclk2 STRING "PORT_UNUSED"
 -- Retrieval info: CONSTANT: PORT_extclk3 STRING "PORT_UNUSED"
+-- Retrieval info: CONSTANT: SELF_RESET_ON_LOSS_LOCK STRING "OFF"
 -- Retrieval info: CONSTANT: WIDTH_CLOCK NUMERIC "5"
 -- Retrieval info: USED_PORT: @clk 0 0 5 0 OUTPUT_CLK_EXT VCC "@clk[4..0]"
 -- Retrieval info: USED_PORT: @inclk 0 0 2 0 INPUT_CLK_EXT VCC "@inclk[1..0]"
@@ -465,6 +473,7 @@ END SYN;
 -- Retrieval info: USED_PORT: c3 0 0 0 0 OUTPUT_CLK_EXT VCC "c3"
 -- Retrieval info: USED_PORT: c4 0 0 0 0 OUTPUT_CLK_EXT VCC "c4"
 -- Retrieval info: USED_PORT: inclk0 0 0 0 0 INPUT_CLK_EXT GND "inclk0"
+-- Retrieval info: USED_PORT: locked 0 0 0 0 OUTPUT GND "locked"
 -- Retrieval info: CONNECT: @areset 0 0 0 0 areset 0 0 0 0
 -- Retrieval info: CONNECT: @inclk 0 0 1 1 GND 0 0 0 0
 -- Retrieval info: CONNECT: @inclk 0 0 1 0 inclk0 0 0 0 0
@@ -473,6 +482,7 @@ END SYN;
 -- Retrieval info: CONNECT: c2 0 0 0 0 @clk 0 0 1 2
 -- Retrieval info: CONNECT: c3 0 0 0 0 @clk 0 0 1 3
 -- Retrieval info: CONNECT: c4 0 0 0 0 @clk 0 0 1 4
+-- Retrieval info: CONNECT: locked 0 0 0 0 @locked 0 0 0 0
 -- Retrieval info: GEN_FILE: TYPE_NORMAL pll.vhd TRUE
 -- Retrieval info: GEN_FILE: TYPE_NORMAL pll.ppf TRUE
 -- Retrieval info: GEN_FILE: TYPE_NORMAL pll.inc FALSE
