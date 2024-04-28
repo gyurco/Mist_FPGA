@@ -31,12 +31,21 @@ derive_pll_clocks -create_base_clocks
 # Automatically calculate clock uncertainty to jitter and other effects.
 derive_clock_uncertainty
 
+set sdram_clk  "pll|altpll_component|auto_generated|pll1|clk[0]"
+set   vid_clk  "pll|altpll_component|auto_generated|pll1|clk[0]"
+
 set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[*]}]
 
-set_output_delay -add_delay  -clock_fall -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[0]}]  1.000 [get_ports {AUDIO_L}]
-set_output_delay -add_delay  -clock_fall -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[0]}]  1.000 [get_ports {AUDIO_R}]
-set_output_delay -add_delay  -clock_fall -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[0]}]  1.000 [get_ports {LED}]
-set_output_delay -add_delay  -clock_fall -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[0]}]  1.000 [get_ports {VGA_*}]
+set_output_delay -add_delay  -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[2]}]  1.000 [get_ports {AUDIO_L}]
+set_output_delay -add_delay  -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[2]}]  1.000 [get_ports {AUDIO_R}]
+set_output_delay -add_delay  -clock [get_clocks {pll|altpll_component|auto_generated|pll1|clk[2]}]  1.000 [get_ports {LED}]
+set_output_delay -add_delay  -clock [get_clocks $vid_clk]  1.000 [get_ports {VGA_*}]
 
 set_multicycle_path -to {VGA_*[*]} -setup 2
 set_multicycle_path -to {VGA_*[*]} -hold 1
+
+set_input_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -max 6.4 [get_ports SDRAM_DQ[*]]
+set_input_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -min 3.2 [get_ports SDRAM_DQ[*]]
+
+set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -max 1.5 [get_ports {SDRAM_D* SDRAM_A* SDRAM_BA* SDRAM_n* SDRAM_CKE}]
+set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -min -0.8 [get_ports {SDRAM_D* SDRAM_A* SDRAM_BA* SDRAM_n* SDRAM_CKE}]

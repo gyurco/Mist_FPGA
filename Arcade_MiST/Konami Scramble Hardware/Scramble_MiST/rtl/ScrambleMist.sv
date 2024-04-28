@@ -151,7 +151,6 @@ localparam bit BIG_OSD = 0;
 `endif
 
 // remove this if the 2nd chip is actually used
-/*
 `ifdef DUAL_SDRAM
 assign SDRAM2_A = 13'hZZZZ;
 assign SDRAM2_BA = 0;
@@ -165,7 +164,7 @@ assign SDRAM2_nCAS = 1;
 assign SDRAM2_nRAS = 1;
 assign SDRAM2_nWE = 1;
 `endif
-*/
+
 `include "build_id.v"
 
 `define CORE_NAME "SCRAMBLE"
@@ -174,10 +173,8 @@ wire [6:0] core_mod;
 localparam CONF_STR = {
 	`CORE_NAME, ";ROM;",
 	"O2,Rotate Controls,Off,On;",
-`ifdef DUAL_SDRAM
 	"OGH,Orientation,Vertical,Clockwise,Anticlockwise;",
 	"OI,Rotation filter,Off,On;",
-`endif
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blending,Off,On;",
 	"O6,Joystick Swap,Off,On;",
@@ -358,17 +355,6 @@ pll pll(
 	.locked(pll_locked)
 	);
 
-`ifdef DUAL_SDRAM
-wire pll2_locked;
-pll pll2(
-	.inclk0(CLOCK_27),
-	.areset(0),
-	.c0(SDRAM2_CLK),
-	.locked(pll2_locked)
-	);
-assign SDRAM2_CKE = 1;
-`endif
-
 // reset generation
 reg reset = 1;
 reg rom_loaded = 0;
@@ -492,7 +478,7 @@ reg         port1_req;
 wire [15:0] rom_dout;
 wire [14:0] rom_addr;
 wire        rom_oe;
-
+/*
 sdram #(.MHZ(48)) sdram(
 	.*,
 	.init_n        ( pll_locked   ),
@@ -510,7 +496,7 @@ sdram #(.MHZ(48)) sdram(
 	.cpu1_addr     ( ioctl_downl ? 17'h1ffff : {3'b000, rom_addr[14:1] } ),
 	.cpu1_q        ( rom_dout  )
 );
-
+*/
 always @(posedge clk_sys) begin
 	reg        ioctl_wr_last = 0;
 
@@ -558,7 +544,7 @@ scramble_top scramble(
 
 mist_dual_video #(.COLOR_DEPTH(6),.SD_HCNT_WIDTH(10),.USE_BLANKS(1),.OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys(clk_vid),
-	.ce_divider(4'h7),
+	.ce_divider(4'hf),
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
@@ -582,19 +568,29 @@ mist_dual_video #(.COLOR_DEPTH(6),.SD_HCNT_WIDTH(10),.USE_BLANKS(1),.OUT_COLOR_D
 	.HDMI_HS(HDMI_HS),
 	.HDMI_DE(HDMI_DE),
 `endif
-`ifdef DUAL_SDRAM
 	.clk_sdram(clk_vid),
-	.sdram_init(~pll2_locked),
-	.SDRAM_A(SDRAM2_A),
-	.SDRAM_DQ(SDRAM2_DQ),
-	.SDRAM_DQML(SDRAM2_DQML),
-	.SDRAM_DQMH(SDRAM2_DQMH),
-	.SDRAM_nWE(SDRAM2_nWE),
-	.SDRAM_nCAS(SDRAM2_nCAS),
-	.SDRAM_nRAS(SDRAM2_nRAS),
-	.SDRAM_nCS(SDRAM2_nCS),
-	.SDRAM_BA(SDRAM2_BA),
-`endif
+	.sdram_init(~pll_locked),
+	.SDRAM_A(SDRAM_A),
+	.SDRAM_DQ(SDRAM_DQ),
+	.SDRAM_DQML(SDRAM_DQML),
+	.SDRAM_DQMH(SDRAM_DQMH),
+	.SDRAM_nWE(SDRAM_nWE),
+	.SDRAM_nCAS(SDRAM_nCAS),
+	.SDRAM_nRAS(SDRAM_nRAS),
+	.SDRAM_nCS(SDRAM_nCS),
+	.SDRAM_BA(SDRAM_BA),
+
+	.ram_din       ( {ioctl_dout, ioctl_dout} ),
+	.ram_dout      ( ),
+	.ram_addr      ( ioctl_addr[22:1] ),
+	.ram_ds        ( { ioctl_addr[0], ~ioctl_addr[0] } ),
+	.ram_req       ( port1_req ),
+	.ram_we        ( ioctl_downl ),
+	.ram_ack       ( ),
+	.rom_oe        ( rom_oe ),
+	.rom_addr      ( rom_addr[14:1] ),
+	.rom_dout      ( rom_dout ),
+
 	.no_csync(no_csync),
 	.rotate({1'b1,rotate}),
 	.rotate_screen(rotate_screen),

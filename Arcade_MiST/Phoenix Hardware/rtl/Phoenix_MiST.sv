@@ -154,21 +154,11 @@ assign SDRAM2_nWE = 1;
 
 `include "build_id.v"
 
-assign SDRAM_A = 13'hZZZZ;
-assign SDRAM_BA = 0;
-assign SDRAM_DQML = 1;
-assign SDRAM_DQMH = 1;
-assign SDRAM_CKE = 0;
-assign SDRAM_CLK = 0;
-assign SDRAM_nCS = 1;
-assign SDRAM_DQ = 16'hZZZZ;
-assign SDRAM_nCAS = 1;
-assign SDRAM_nRAS = 1;
-assign SDRAM_nWE = 1;
-
 localparam CONF_STR = {
 	"PHOENIX;;",
 	"O2,Rotate Controls,Off,On;",
+	"O67,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"O1,Rotation filter,Off,On;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
 	"DIP;",
@@ -176,10 +166,12 @@ localparam CONF_STR = {
 	"V,v2,",`BUILD_DATE
 };
 
-wire       rotate = status[2];
-wire [1:0] scanlines = status[4:3];
-wire       blend = status[5];
-wire [7:0] dsw = status[15:8];
+wire        rotate = status[2];
+wire  [1:0] scanlines = status[4:3];
+wire        blend = status[5];
+wire  [1:0] rotate_screen = status[7:6];
+wire        rotate_filter = status[1];
+wire  [7:0] dsw = status[15:8];
 
 assign LED = ~ioctl_downl;
 assign AUDIO_R = AUDIO_L;
@@ -189,9 +181,13 @@ wire pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
 	.areset(0),
-	.c0(clk_sys),//11
-	.c1(clk_44)
+	.c0(clk_44),
+	.c1(clk_sys), //11
+	.locked(pll_locked)
 	);
+
+assign SDRAM_CLK = clk_44;
+assign SDRAM_CKE = 1;
 
 wire  [6:0] core_mod;
 wire [31:0] status;
@@ -296,7 +292,7 @@ phoenix phoenix(
 	.video_vblank(vb), 
 	.video_hblank_bg(hb1), 
 	.video_hblank_fg(hb2),
-	.audio_select("000"),
+	.audio_select(3'b000),
 	.audio(audio),
 
 	.dl_addr(ioctl_addr[15:0]),
@@ -304,7 +300,7 @@ phoenix phoenix(
 	.dl_data(ioctl_dout)
 	);
 
-mist_video #(.COLOR_DEPTH(2), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+mist_dual_video #(.COLOR_DEPTH(2), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys(clk_44),
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
@@ -321,9 +317,32 @@ mist_video #(.COLOR_DEPTH(2), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .U
 	.VGA_B(VGA_B),
 	.VGA_VS(VGA_VS),
 	.VGA_HS(VGA_HS),
-	.ce_divider(3'd0),
+`ifdef USE_HDMI
+	.HDMI_R         ( HDMI_R          ),
+	.HDMI_G         ( HDMI_G          ),
+	.HDMI_B         ( HDMI_B          ),
+	.HDMI_VS        ( HDMI_VS         ),
+	.HDMI_HS        ( HDMI_HS         ),
+	.HDMI_DE        ( HDMI_DE         ),
+`endif
+	.clk_sdram      ( clk_44          ),
+	.sdram_init     ( ~pll_locked     ),
+	.SDRAM_A        ( SDRAM_A         ),
+	.SDRAM_DQ       ( SDRAM_DQ        ),
+	.SDRAM_DQML     ( SDRAM_DQML      ),
+	.SDRAM_DQMH     ( SDRAM_DQMH      ),
+	.SDRAM_nWE      ( SDRAM_nWE       ),
+	.SDRAM_nCAS     ( SDRAM_nCAS      ),
+	.SDRAM_nRAS     ( SDRAM_nRAS      ),
+	.SDRAM_nCS      ( SDRAM_nCS       ),
+	.SDRAM_BA       ( SDRAM_BA        ),
+
+	.ce_divider(4'd7),
 	.blend(blend),
 	.rotate({1'b1,rotate}),
+	.rotate_screen  ( rotate_screen   ),
+	.rotate_hfilter ( rotate_filter   ),
+	.rotate_vfilter ( rotate_filter   ),
 	.scandoubler_disable(scandoublerD),
 	.scanlines(scanlines),
 	.ypbpr(ypbpr),
@@ -349,32 +368,6 @@ i2c_master #(11_000_000) i2c_master (
  	.I2C_SDA     (HDMI_SDA)
 );
 
-mist_video #(.COLOR_DEPTH(2), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(8), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) hdmi_video(
-	.clk_sys(clk_44),
-	.SPI_SCK(SPI_SCK),
-	.SPI_SS3(SPI_SS3),
-	.SPI_DI(SPI_DI),
-	.R(r),
-	.G(g),
-	.B(b),
-	.HBlank(hb1 | hb2),
-	.VBlank(vb),
-	.HSync(~hs),
-	.VSync(~vs),
-	.VGA_R(HDMI_R),
-	.VGA_G(HDMI_G),
-	.VGA_B(HDMI_B),
-	.VGA_VS(HDMI_VS),
-	.VGA_HS(HDMI_HS),
-	.VGA_DE(HDMI_DE),
-	.ce_divider(3'd0),
-	.blend(blend),
-	.rotate({1'b1,rotate}),
-	.scandoubler_disable(1'b0),
-	.scanlines(scanlines),
-	.ypbpr(1'b0),
-	.no_csync(1'b1)
-	);
 assign HDMI_PCLK = clk_44;
 `endif
 
@@ -430,7 +423,7 @@ arcade_inputs inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( 2'b11       ),
+	.orientation ( {1'b1, ~|rotate_screen} ),
 	.joyswap     ( 1'b0        ),
 	.oneplayer   ( 1'b1        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),

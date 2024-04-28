@@ -120,6 +120,8 @@ set_location_assignment PIN_43 -to SDRAM_CLK
 set_location_assignment PIN_31 -to UART_RX
 set_location_assignment PIN_46 -to UART_TX
 
+set_location_assignment PLL_1 -to "pll:pll|altpll:altpll_component"
+
 # Classic Timing Assignments
 # ==========================
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0

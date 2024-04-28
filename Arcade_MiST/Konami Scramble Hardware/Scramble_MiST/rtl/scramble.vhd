@@ -636,15 +636,15 @@ begin
     end if;
   end process;
 
-  rom_oe <= '1' when romsel = '1' and (cpu_mreq_l = '0') and (cpu_rfsh_l = '1') else '0';
+  rom_oe <= '1' when romsel = '1' and (cpu_rfsh_l = '1') else '0';
 
   p_cpu_data_in_mux : process(I_HWSEL, cpu_addr, cpu_rd_l, cpu_mreq_l, cpu_rfsh_l, ram_dout, rom_dout, vramrd_l, vram_data, I_DATA_OE_L, I_DATA, romsel )
     variable ram_addr : std_logic_vector(1 downto 0);
   begin
 
-    if I_HWSEL = I_HWSEL_MIMONKEY and (cpu_addr(15 downto 14) = "11" or cpu_addr(15 downto 14) = "00") and (cpu_rd_l = '0') then
+    if I_HWSEL = I_HWSEL_MIMONKEY and (cpu_addr(15 downto 14) = "11" or cpu_addr(15 downto 14) = "00") then
       romsel <= '1';
-    elsif (cpu_addr(15) = '0') and I_HWSEL /= I_HWSEL_MIMONKEY and ((I_HWSEL /= I_HWSEL_SCRAMBLE and I_HWSEL /= I_HWSEL_MARS) or cpu_addr(14) = '0') and (cpu_rd_l = '0') then
+    elsif (cpu_addr(15) = '0') and I_HWSEL /= I_HWSEL_MIMONKEY and ((I_HWSEL /= I_HWSEL_SCRAMBLE and I_HWSEL /= I_HWSEL_MARS) or cpu_addr(14) = '0') then
       romsel <= '1';
     else
       romsel <= '0';
@@ -664,7 +664,7 @@ begin
       cpu_data_in <= I_DATA;
     --
     elsif (cpu_mreq_l = '0') and (cpu_rfsh_l = '1') then
-      if romsel = '1' then
+      if romsel = '1' and cpu_rd_l = '0' then
         cpu_data_in <= rom_dout;
       --
       elsif (cpu_addr(15 downto 14) = ram_addr) then

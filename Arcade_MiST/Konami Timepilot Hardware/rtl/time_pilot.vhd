@@ -625,11 +625,12 @@ begin
 			hblank <= '1';
 			if vcnt = 495 then
 				vblank <= '1';   -- 492 ok
-			elsif vcnt = 263 then
-				vblank <= '0';   -- 262 ok 
 			end if;
 		elsif hcnt = 0 then
 			hblank <= '0';
+			if vcnt = 272 then
+				vblank <= '0';   -- 262 ok 
+			end if;
 		end if;
 
 		video_hs <= hsync0;

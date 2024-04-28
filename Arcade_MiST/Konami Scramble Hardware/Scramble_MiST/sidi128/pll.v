@@ -110,7 +110,7 @@ module pll (
 		altpll_component.bandwidth_type = "AUTO",
 		altpll_component.clk0_divide_by = 45,
 		altpll_component.clk0_duty_cycle = 50,
-		altpll_component.clk0_multiply_by = 82,
+		altpll_component.clk0_multiply_by = 164,
 		altpll_component.clk0_phase_shift = "0",
 		altpll_component.clk1_divide_by = 45,
 		altpll_component.clk1_duty_cycle = 50,
@@ -193,7 +193,7 @@ endmodule
 // Retrieval info: PRIVATE: DIV_FACTOR1 NUMERIC "45"
 // Retrieval info: PRIVATE: DUTY_CYCLE0 STRING "50.00000000"
 // Retrieval info: PRIVATE: DUTY_CYCLE1 STRING "50.00000000"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "49.200001"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "98.400002"
 // Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "24.600000"
 // Retrieval info: PRIVATE: EXPLICIT_SWITCHOVER_COUNTER STRING "0"
 // Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
@@ -219,7 +219,7 @@ endmodule
 // Retrieval info: PRIVATE: MIG_DEVICE_SPEED_GRADE STRING "Any"
 // Retrieval info: PRIVATE: MIRROR_CLK0 STRING "0"
 // Retrieval info: PRIVATE: MIRROR_CLK1 STRING "0"
-// Retrieval info: PRIVATE: MULT_FACTOR0 NUMERIC "82"
+// Retrieval info: PRIVATE: MULT_FACTOR0 NUMERIC "164"
 // Retrieval info: PRIVATE: MULT_FACTOR1 NUMERIC "41"
 // Retrieval info: PRIVATE: NORMAL_MODE_RADIO STRING "1"
 // Retrieval info: PRIVATE: OUTPUT_FREQ0 STRING "24.57600000"
@@ -271,7 +271,7 @@ endmodule
 // Retrieval info: CONSTANT: BANDWIDTH_TYPE STRING "AUTO"
 // Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "45"
 // Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
-// Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "82"
+// Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "164"
 // Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
 // Retrieval info: CONSTANT: CLK1_DIVIDE_BY NUMERIC "45"
 // Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "50"

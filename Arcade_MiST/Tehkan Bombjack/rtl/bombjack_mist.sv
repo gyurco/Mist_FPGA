@@ -167,8 +167,8 @@ localparam CONF_STR = {
 };
 
 wire        rotate = status[2];
-wire [1:0] rotate_screen = status[6:5];
-wire       rotate_filter = status[7];
+wire  [1:0] rotate_screen = status[6:5];
+wire        rotate_filter = status[7];
 wire  [1:0] scanlines = status[4:3];
 wire  [7:0] sw1 = status[15:8];
 wire  [7:0] sw2 = status[23:16];

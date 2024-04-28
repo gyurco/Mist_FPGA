@@ -170,6 +170,8 @@ assign SDRAM2_nWE = 1;
 localparam CONF_STR = {
 	"TIMEPLT;;",
 	"O2,Rotate Controls,Off,On;",
+	"O67,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"O1,Rotation filter,Off,On;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
 	`SEP
@@ -179,23 +181,27 @@ localparam CONF_STR = {
 	"V,",`BUILD_DATE
 };
 
-wire       rotate = status[2];
-wire [1:0] scanlines = status[4:3];
-wire       blend = status[5];
+wire        rotate = status[2];
+wire  [1:0] scanlines = status[4:3];
+wire        blend = status[5];
+wire  [1:0] rotate_screen = status[7:6];
+wire        rotate_filter = status[1];
 
-wire       psurge = core_mod[0];
-wire [7:0] sw1 = status[15:8];
-wire [7:0] sw2 = status[23:16];
+wire        psurge = core_mod[0];
+wire  [7:0] sw1 = status[15:8];
+wire  [7:0] sw2 = status[23:16];
 
 assign LED = 1;
 assign AUDIO_R = AUDIO_L;
-assign SDRAM_CLK = clock_48;
+assign SDRAM_CLK = clock_96;
+assign SDRAM_CKE = 1;
 
-wire clock_48, clock_12, clock_6, pll_locked;
+wire clock_96, clock_48, clock_12, clock_6, pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
-	.c0(clock_48),
-	.c1(clock_12),//12.28800000
+	.c0(clock_96),
+	.c1(clock_48),
+	.c2(clock_12),//12.28800000
 	.c3(clock_6),
 	.locked(pll_locked)
 	);
@@ -272,6 +278,7 @@ wire  [7:0] ioctl_index;
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
+reg         port1_req;
 
 data_io data_io(
 	.clk_sys       ( clock_48      ),
@@ -285,6 +292,18 @@ data_io data_io(
 	.ioctl_dout    ( ioctl_dout   )
 );
 
+always @(posedge clock_48) begin
+	reg        ioctl_wr_last = 0;
+
+	ioctl_wr_last <= ioctl_wr;
+	if (ioctl_downl) begin
+		if (~ioctl_wr_last && ioctl_wr) begin
+			port1_req <= ~port1_req;
+		end
+	end
+end
+
+/*
 sdram rom(
 	.*,
 	.init          ( ~pll_locked  ),
@@ -297,7 +316,7 @@ sdram rom(
 	.rd            ( !ioctl_downl & rom_rd),
 	.ready()
 );
-
+*/
 reg reset = 1;
 reg rom_loaded = 0;
 always @(posedge clock_12) begin
@@ -328,7 +347,7 @@ time_pilot time_pilot(
 	.video_vblank(vb),
 	.audio_out(audio), 
 	.roms_addr(rom_addr),
-	.roms_do(rom_do[7:0]),
+	.roms_do(rom_addr[0] ? rom_do[15:8] : rom_do[7:0]),
 	.roms_rd(rom_rd),
 	.dip_switch_1(sw1),
 	.dip_switch_2(sw2),
@@ -351,8 +370,8 @@ time_pilot time_pilot(
 	.dl_data(ioctl_dout)
 );
 
-mist_video #(.COLOR_DEPTH(5), .OUT_COLOR_DEPTH(VGA_BITS), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
-	.clk_sys        ( clock_48         ),
+mist_dual_video #(.COLOR_DEPTH(5), .OUT_COLOR_DEPTH(VGA_BITS), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+	.clk_sys        ( clock_96         ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
@@ -368,8 +387,43 @@ mist_video #(.COLOR_DEPTH(5), .OUT_COLOR_DEPTH(VGA_BITS), .SD_HCNT_WIDTH(10), .U
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
-	.ce_divider     ( 1'b0             ),
+`ifdef USE_HDMI
+	.HDMI_R         ( HDMI_R           ),
+	.HDMI_G         ( HDMI_G           ),
+	.HDMI_B         ( HDMI_B           ),
+	.HDMI_VS        ( HDMI_VS          ),
+	.HDMI_HS        ( HDMI_HS          ),
+	.HDMI_DE        ( HDMI_DE          ),
+`endif
+	.clk_sdram      ( clock_96         ),
+	.sdram_init     ( ~pll_locked      ),
+	.SDRAM_A        ( SDRAM_A          ),
+	.SDRAM_DQ       ( SDRAM_DQ         ),
+	.SDRAM_DQML     ( SDRAM_DQML       ),
+	.SDRAM_DQMH     ( SDRAM_DQMH       ),
+	.SDRAM_nWE      ( SDRAM_nWE        ),
+	.SDRAM_nCAS     ( SDRAM_nCAS       ),
+	.SDRAM_nRAS     ( SDRAM_nRAS       ),
+	.SDRAM_nCS      ( SDRAM_nCS        ),
+	.SDRAM_BA       ( SDRAM_BA         ),
+
+	.ram_din        ( {ioctl_dout, ioctl_dout} ),
+	.ram_dout       ( ),
+	.ram_addr       ( ioctl_addr[22:1] ),
+	.ram_ds         ( { ioctl_addr[0], ~ioctl_addr[0] } ),
+	.ram_req        ( port1_req        ),
+	.ram_we         ( ioctl_downl      ),
+	.ram_ack        ( ),
+	.rom_oe         ( rom_rd           ),
+	.rom_addr       ( rom_addr[14:1]   ),
+	.rom_dout       ( rom_do           ),
+
+	.ce_divider     ( 4'd15            ),
 	.rotate         ( { ~psurge, rotate } ),
+	.rotate_screen  ( rotate_screen    ),
+	.rotate_hfilter ( rotate_filter    ),
+	.rotate_vfilter ( rotate_filter    ),
+
 	.scandoubler_disable( scandoublerD ),
 	.scanlines      ( scanlines        ),
 	.blend          ( blend            ),
@@ -394,33 +448,6 @@ i2c_master #(12_000_000) i2c_master (
 	.I2C_SCL     (HDMI_SCL),
  	.I2C_SDA     (HDMI_SDA)
 );
-
-mist_video #(.COLOR_DEPTH(5), .OUT_COLOR_DEPTH(8), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) hdmi_video(
-	.clk_sys        ( clock_48         ),
-	.SPI_SCK        ( SPI_SCK          ),
-	.SPI_SS3        ( SPI_SS3          ),
-	.SPI_DI         ( SPI_DI           ),
-	.R              ( r                ),
-	.G              ( g                ),
-	.B              ( b                ),
-	.HBlank         ( hb               ),
-	.VBlank         ( vb               ),
-	.HSync          ( hs               ),
-	.VSync          ( vs               ),
-	.VGA_R          ( HDMI_R           ),
-	.VGA_G          ( HDMI_G           ),
-	.VGA_B          ( HDMI_B           ),
-	.VGA_VS         ( HDMI_VS          ),
-	.VGA_HS         ( HDMI_HS          ),
-	.VGA_DE         ( HDMI_DE          ),
-	.ce_divider     ( 1'b0             ),
-	.rotate         ( { ~psurge, rotate } ),
-	.scandoubler_disable( 1'b0         ),
-	.scanlines      ( scanlines        ),
-	.blend          ( blend            ),
-	.ypbpr          ( 1'b0             ),
-	.no_csync       ( 1'b1             )
-	);
 
 assign HDMI_PCLK = clock_48;
 
@@ -477,7 +504,7 @@ arcade_inputs inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( {~psurge, 1'b1} ),
+	.orientation ( {~psurge, ~|rotate_screen} ),
 	.joyswap     ( 1'b0        ),
 	.oneplayer   ( 1'b1        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),

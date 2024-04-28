@@ -170,7 +170,7 @@ port(
  snd_rom_addr   : out std_logic_vector(13 downto 0);
  snd_rom_do     : in std_logic_vector(7 downto 0);
 
- sp_addr        : out std_logic_vector(14 downto 0);
+ sp_addr        : out std_logic_vector(13 downto 0);
  sp_graphx32_do : in std_logic_vector(31 downto 0);
 
  dl_addr        : in std_logic_vector(16 downto 0);
@@ -534,17 +534,17 @@ begin
 				sp_attr <= sp_ram_do;
 			when "000010" => 
 				sp_code <= sp_ram_do;
-				sp_addr <= sp_ram_do(7 downto 0) & (sp_line xor sp_vflip) & (sp_byte_cnt xor sp_hflip); -- graphics rom addr
+				sp_addr <= sp_ram_do(6 downto 0) & (sp_line xor sp_vflip) & (sp_byte_cnt xor sp_hflip); -- graphics rom addr
 			when "000011" => 
 				sp_hcnt <= sp_ram_do & '0';
 			when "001010" => -- 10
 				sp_graphx32_do_r <= sp_graphx32_do; -- latch incoming sprite data
-				sp_addr <= sp_code(7 downto 0) & (sp_line xor sp_vflip) & (sp_byte_cnt+1 xor sp_hflip); -- advance graphics rom addr
+				sp_addr <= sp_code(6 downto 0) & (sp_line xor sp_vflip) & (sp_byte_cnt+1 xor sp_hflip); -- advance graphics rom addr
 				sp_on_line <= '1';
 			when "010010"|"011010"|"100010" => -- 18,26,34
 				sp_graphx32_do_r <= sp_graphx32_do; -- latch incoming sprite data
-				sp_addr <= sp_code(7 downto 0) & (sp_line xor sp_vflip) & (sp_byte_cnt+2 xor sp_hflip); -- advance graphics rom addr
-			  sp_byte_cnt <= sp_byte_cnt + 1;
+				sp_addr <= sp_code(6 downto 0) & (sp_line xor sp_vflip) & (sp_byte_cnt+2 xor sp_hflip); -- advance graphics rom addr
+				sp_byte_cnt <= sp_byte_cnt + 1;
 			when "101010" => -- 42
 				sp_on_line <= '0';
 				sp_input_phase <= (others => '0');
