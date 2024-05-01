@@ -21,6 +21,7 @@ port(
 
   rom_addr     : out std_logic_vector(15 downto 0);
   rom_do       : in std_logic_vector(7 downto 0);
+  rom_oe       : out std_logic;
 
   p1           : in std_logic_vector(7 downto 0);
   p2           : in std_logic_vector(7 downto 0);
@@ -141,6 +142,7 @@ signal cpu_addr   : std_logic_vector(15 downto 0);
 signal cpu_do     : std_logic_vector(7 downto 0);
 signal cpu_di     : std_logic_vector(7 downto 0);
 signal cpu_mreq_n : std_logic;
+signal cpu_rfsh_n : std_logic;
 signal cpu_m1_n   : std_logic;
 signal cpu_int_n  : std_logic;
 signal cpu_iorq_n : std_logic;
@@ -403,6 +405,10 @@ prog_do_rpatrol <= prog_do xor x"79" when cpu_addr(0) = '0' else prog_do xor x"5
 
 sega_315_5018_idx <= cpu_addr(12) & cpu_addr(8) & cpu_addr(4) & cpu_addr(0) & cpu_m1_n & (rom_do(5) xor rom_do(7)) & (rom_do(3) xor rom_do(7));
 prog_do_segacrypt <= (rom_do and not X"A8") or (sega_315_5018(to_integer(unsigned(sega_315_5018_idx))) xor (rom_do(7) & '0' & rom_do(7) & '0' & rom_do(7) & "000"));
+
+rom_oe <= '1' when cpu_rfsh_n = '1' and 
+  ((cpu_addr < x"6000" or cpu_addr(15 downto 12) = x"7") or 
+  (hwmod = HW_SWIMMER and (cpu_addr(15 downto 12) = x"6" or cpu_addr(15 downto 12) >= x"E"))) else '0';
 
 process(hwmod, cpu_addr, big_sprite_ram_q, tile_ram_do, color_ram_do, p1, p2, dip, sys1, sys2, 
 	hwenc, prog_do, prog_do_decrypted, prog_do_rpatrol, prog_do_segacrypt, wram1_do, wram2_do)
@@ -867,7 +873,7 @@ port map(
   IORQ_n  => cpu_iorq_n,
   RD_n    => open,
   WR_n    => cpu_wr_n,
-  RFSH_n  => open,
+  RFSH_n  => cpu_rfsh_n,
   HALT_n  => open,
   BUSAK_n => open,
   A       => cpu_addr,

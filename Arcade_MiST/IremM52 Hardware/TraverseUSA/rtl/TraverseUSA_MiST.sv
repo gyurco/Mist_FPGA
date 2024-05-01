@@ -147,6 +147,7 @@ localparam bit BIG_OSD = 0;
 `endif
 
 // remove this if the 2nd chip is actually used
+/*
 `ifdef DUAL_SDRAM
 assign SDRAM2_A = 13'hZZZZ;
 assign SDRAM2_BA = 0;
@@ -160,7 +161,7 @@ assign SDRAM2_nCAS = 1;
 assign SDRAM2_nRAS = 1;
 assign SDRAM2_nWE = 1;
 `endif
-
+*/
 `include "build_id.v" 
 
 `define CORE_NAME "TRAVRUSA"
@@ -169,6 +170,10 @@ wire [6:0] core_mod;
 localparam CONF_STR = {
 	`CORE_NAME,";;",
 	"O2,Rotate Controls,Off,On;",
+`ifdef DUAL_SDRAM
+	"OGH,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"OI,Rotation filter,Off,On;",
+`endif
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O1,Video Timing,Original,Pal 50Hz;",
 	"OA,Blending,Off,On;",
@@ -183,10 +188,12 @@ localparam CONF_STR = {
 	"V,v1.0.",`BUILD_DATE
 };
 
-wire       rotate = status[2];
-wire [1:0] scanlines = status[4:3];
-wire       blend = status[10];
-wire       pal = status[1];
+wire        rotate = status[2];
+wire  [1:0] rotate_screen = status[17:16];
+wire        rotate_filter = status[18];
+wire  [1:0] scanlines = status[4:3];
+wire        blend = status[10];
+wire        pal = status[1];
 
 reg        shtrider = 0;
 wire [7:0] dip1 = 8'hff;
@@ -206,17 +213,28 @@ end
 
 assign LED = 1;
 assign AUDIO_R = AUDIO_L;
-assign SDRAM_CLK = clk_sys;
+assign SDRAM_CLK = clk_sd;
 assign SDRAM_CKE = 1;
 
-wire clk_sys, clk_aud, clk_dac;
+wire clk_sd, clk_sys, clk_aud, clk_dac;
 wire pll_locked;
 pll_mist pll(
 	.inclk0(CLOCK_27),
 	.areset(0),
-	.c0(clk_sys),
+	.c0(clk_sd),
+	.c1(clk_sys),
 	.locked(pll_locked)
 	);
+
+`ifdef DUAL_SDRAM
+wire pll2_locked;
+pll_mist pll2(
+	.inclk0(CLOCK_27),
+	.c0(SDRAM2_CLK),
+	.locked(pll2_locked)
+	);
+assign SDRAM2_CKE = 1;
+`endif
 
 pll_aud pll_aud(
 	.inclk0(CLOCK_27),
@@ -318,7 +336,7 @@ reg port1_req, port2_req;
 sdram sdram(
 	.*,
 	.init_n        ( pll_locked   ),
-	.clk           ( clk_sys      ),
+	.clk           ( clk_sd       ),
 
 	// port1 used for main CPU
 	.port1_req     ( port1_req    ),
@@ -374,7 +392,7 @@ end
 
 wire [10:0] audio;
 wire        hs, vs;
-wire        hb, vb;
+wire        hb, hb2, vb;
 wire  [2:0] g,b;
 wire  [1:0] r;
 
@@ -393,6 +411,7 @@ traverse_usa traverse_usa (
 	.video_hs     ( hs              ),
 	.video_vs     ( vs              ),
 	.video_hblank ( hb              ),
+	.video_hblank2( hb2             ),
 	.video_vblank ( vb              ),
 
 	.audio_out    ( audio           ),
@@ -425,29 +444,53 @@ traverse_usa traverse_usa (
 	.dl_wr        ( ioctl_wr        )
 );
 
-mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .BIG_OSD(BIG_OSD), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1)) mist_video(
-	.clk_sys        ( clk_sys          ),
+mist_dual_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .BIG_OSD(BIG_OSD), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .VIDEO_CLEANER(1'b1)) mist_video(
+	.clk_sys        ( clk_sd           ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( {r, r[1] }       ),
-	.G              ( g                ),
-	.B              ( b                ),
+	.R              ( hb ? 4'd0 : {r, r[1] } ),
+	.G              ( hb ? 4'd0 : g    ),
+	.B              ( hb ? 4'd0 : b    ),
 	.HSync          ( hs               ),
 	.VSync          ( vs               ),
-	.HBlank         ( hb               ),
+	.HBlank         ( |rotate_screen ? hb2 : hb ),
 	.VBlank         ( vb               ),
 	.VGA_R          ( VGA_R            ),
 	.VGA_G          ( VGA_G            ),
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
+`ifdef USE_HDMI
+	.HDMI_R         ( HDMI_R           ),
+	.HDMI_G         ( HDMI_G           ),
+	.HDMI_B         ( HDMI_B           ),
+	.HDMI_VS        ( HDMI_VS          ),
+	.HDMI_HS        ( HDMI_HS          ),
+	.HDMI_DE        ( HDMI_DE          ),
+`endif
+`ifdef DUAL_SDRAM
+	.clk_sdram      ( clk_sd           ),
+	.sdram_init     ( ~pll2_locked     ),
+	.SDRAM_A        ( SDRAM2_A         ),
+	.SDRAM_DQ       ( SDRAM2_DQ        ),
+	.SDRAM_DQML     ( SDRAM2_DQML      ),
+	.SDRAM_DQMH     ( SDRAM2_DQMH      ),
+	.SDRAM_nWE      ( SDRAM2_nWE       ),
+	.SDRAM_nCAS     ( SDRAM2_nCAS      ),
+	.SDRAM_nRAS     ( SDRAM2_nRAS      ),
+	.SDRAM_nCS      ( SDRAM2_nCS       ),
+	.SDRAM_BA       ( SDRAM2_BA        ),
+`endif
 	.rotate         ( { 1'b1, rotate } ),
+	.rotate_screen  ( rotate_screen    ),
+	.rotate_hfilter ( rotate_filter    ),
+	.rotate_vfilter ( rotate_filter    ),
 	.scandoubler_disable( scandoublerD ),
 	.scanlines      ( scanlines        ),
 	.ypbpr          ( ypbpr            ),
 	.no_csync       ( no_csync         ),
-	.ce_divider     ( 3'b0             ),
+	.ce_divider     ( 4'd11            ),
 	.blend          ( blend            )
 	);
 
@@ -469,33 +512,6 @@ i2c_master #(36_000_000) i2c_master (
 	.I2C_SCL     (HDMI_SCL),
  	.I2C_SDA     (HDMI_SDA)
 );
-
-mist_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .BIG_OSD(BIG_OSD), .OUT_COLOR_DEPTH(8), .USE_BLANKS(1'b1), .VIDEO_CLEANER(1'b1)) hdmi_video(
-	.clk_sys        ( clk_sys          ),
-	.SPI_SCK        ( SPI_SCK          ),
-	.SPI_SS3        ( SPI_SS3          ),
-	.SPI_DI         ( SPI_DI           ),
-	.R              ( {r, r[1] }       ),
-	.G              ( g                ),
-	.B              ( b                ),
-	.HSync          ( hs               ),
-	.VSync          ( vs               ),
-	.HBlank         ( hb               ),
-	.VBlank         ( vb               ),
-	.VGA_R          ( HDMI_R           ),
-	.VGA_G          ( HDMI_G           ),
-	.VGA_B          ( HDMI_B           ),
-	.VGA_VS         ( HDMI_VS          ),
-	.VGA_HS         ( HDMI_HS          ),
-	.VGA_DE         ( HDMI_DE          ),
-	.rotate         ( { 1'b1, rotate } ),
-	.scandoubler_disable( 1'b0         ),
-	.scanlines      ( scanlines        ),
-	.ypbpr          ( 1'b0             ),
-	.no_csync       ( 1'b1             ),
-	.ce_divider     ( 3'd0             ),
-	.blend          ( blend            )
-	);
 
 	assign HDMI_PCLK = clk_sys;
 `endif
@@ -552,7 +568,7 @@ arcade_inputs inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( 2'b11       ),
+	.orientation ( {1'b1, ~|rotate_screen} ),
 	.joyswap     ( 1'b0        ),
 	.oneplayer   ( 1'b1        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),

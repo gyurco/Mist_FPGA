@@ -102,7 +102,7 @@ module pll (
 				.vcounderrange ());
 	defparam
 		altpll_component.bandwidth_type = "AUTO",
-		altpll_component.clk0_divide_by = 52,
+		altpll_component.clk0_divide_by = 13,
 		altpll_component.clk0_duty_cycle = 50,
 		altpll_component.clk0_multiply_by = 47,
 		altpll_component.clk0_phase_shift = "0",
@@ -110,7 +110,7 @@ module pll (
 		altpll_component.clk1_duty_cycle = 50,
 		altpll_component.clk1_multiply_by = 47,
 		altpll_component.clk1_phase_shift = "0",
-		altpll_component.clk2_divide_by = 26,
+		altpll_component.clk2_divide_by = 52,
 		altpll_component.clk2_duty_cycle = 50,
 		altpll_component.clk2_multiply_by = 47,
 		altpll_component.clk2_phase_shift = "0",
@@ -187,15 +187,15 @@ endmodule
 // Retrieval info: PRIVATE: CUR_DEDICATED_CLK STRING "c0"
 // Retrieval info: PRIVATE: CUR_FBIN_CLK STRING "c0"
 // Retrieval info: PRIVATE: DEVICE_SPEED_GRADE STRING "8"
-// Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "52"
+// Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "13"
 // Retrieval info: PRIVATE: DIV_FACTOR1 NUMERIC "104"
-// Retrieval info: PRIVATE: DIV_FACTOR2 NUMERIC "26"
+// Retrieval info: PRIVATE: DIV_FACTOR2 NUMERIC "52"
 // Retrieval info: PRIVATE: DUTY_CYCLE0 STRING "50.00000000"
 // Retrieval info: PRIVATE: DUTY_CYCLE1 STRING "50.00000000"
 // Retrieval info: PRIVATE: DUTY_CYCLE2 STRING "50.00000000"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "24.403847"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE0 STRING "97.615387"
 // Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE1 STRING "12.201923"
-// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE2 STRING "48.807693"
+// Retrieval info: PRIVATE: EFF_OUTPUT_FREQ_VALUE2 STRING "24.403847"
 // Retrieval info: PRIVATE: EXPLICIT_SWITCHOVER_COUNTER STRING "0"
 // Retrieval info: PRIVATE: EXT_FEEDBACK_RADIO STRING "0"
 // Retrieval info: PRIVATE: GLOCKED_COUNTER_EDIT_CHANGED STRING "1"
@@ -281,7 +281,7 @@ endmodule
 // Retrieval info: PRIVATE: ZERO_DELAY_RADIO STRING "0"
 // Retrieval info: LIBRARY: altera_mf altera_mf.altera_mf_components.all
 // Retrieval info: CONSTANT: BANDWIDTH_TYPE STRING "AUTO"
-// Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "52"
+// Retrieval info: CONSTANT: CLK0_DIVIDE_BY NUMERIC "13"
 // Retrieval info: CONSTANT: CLK0_DUTY_CYCLE NUMERIC "50"
 // Retrieval info: CONSTANT: CLK0_MULTIPLY_BY NUMERIC "47"
 // Retrieval info: CONSTANT: CLK0_PHASE_SHIFT STRING "0"
@@ -289,7 +289,7 @@ endmodule
 // Retrieval info: CONSTANT: CLK1_DUTY_CYCLE NUMERIC "50"
 // Retrieval info: CONSTANT: CLK1_MULTIPLY_BY NUMERIC "47"
 // Retrieval info: CONSTANT: CLK1_PHASE_SHIFT STRING "0"
-// Retrieval info: CONSTANT: CLK2_DIVIDE_BY NUMERIC "26"
+// Retrieval info: CONSTANT: CLK2_DIVIDE_BY NUMERIC "52"
 // Retrieval info: CONSTANT: CLK2_DUTY_CYCLE NUMERIC "50"
 // Retrieval info: CONSTANT: CLK2_MULTIPLY_BY NUMERIC "47"
 // Retrieval info: CONSTANT: CLK2_PHASE_SHIFT STRING "0"

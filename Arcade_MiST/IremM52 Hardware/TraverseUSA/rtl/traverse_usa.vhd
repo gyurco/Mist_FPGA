@@ -123,6 +123,7 @@ port(
  video_csync    : out std_logic;
  video_blankn   : out std_logic;
  video_hblank   : out std_logic;
+ video_hblank2  : out std_logic; -- for 256x256 screen
  video_vblank   : out std_logic;
  video_hs       : out std_logic;
  video_vs       : out std_logic;
@@ -182,6 +183,7 @@ architecture struct of traverse_usa is
  signal hsync2  : std_logic; 
 
  signal hblank  : std_logic; 
+ signal hblank2 : std_logic; 
  signal vblank  : std_logic; 
  
  signal cpu_ena        : std_logic;
@@ -747,14 +749,19 @@ if rising_edge(clock_36) and pix_ena = '1' then
 	elsif hcnt = 272 then hblank <= '0';
 	end if;
 
+	if    hcnt = 128+8 then hblank2 <= '1'; 
+	elsif hcnt = 272-8 then hblank2 <= '0';
+	end if;
+
 	-- vcnt : [230-511] 282 lines
 	if    vcnt = 200 or vcnt = 230 then vblank <= '1';
-	elsif vcnt = 256 then vblank <= '0';
+	elsif vcnt = 257 then vblank <= '0';
 	end if;
 
 	-- external sync and blank outputs
 	video_blankn <= not (hblank or vblank);
 	video_hblank <= hblank;
+	video_hblank2 <= hblank2;
 	video_vblank <= vblank;
 --
 	video_hs <= hsync0;
