@@ -201,7 +201,7 @@ wire  [7:0] NVDT;
 //RAM_B #(9,255)	nvram(DEVCL,CPUAD,NVDV,CPUWR,CPUDO,NVDT);
 
 dpram#(
-	.init_file("rtl/nvinit.mif"),
+	.init_file("../rtl/nvinit.mif"),
 	.data_width_g(8),
 	.addr_width_g(9))
 nvram(
