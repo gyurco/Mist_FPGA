@@ -168,6 +168,9 @@ architecture RTL of galaxian is
 	signal W_WAV_D2           : std_logic_vector( 7 downto 0) := (others => '0');
 	signal W_DAC              : std_logic_vector( 3 downto 0) := (others => '0');
 
+	signal HBLANK1            : std_logic;
+	signal HBLANK2            : std_logic;
+
 	signal PSG_EN             : std_logic;
 	signal PSG_D              : std_logic_vector(7 downto 0);
 	signal PSG_A,PSG_B,PSG_C  : std_logic_vector(7 downto 0);
@@ -476,8 +479,12 @@ begin
 	process(W_CLK_6M)
 	begin
 		if rising_edge(W_CLK_6M) then
-			HBLANK   <= not W_H_BLXn;
-			VBLANK   <= not W_V_BL2n;
+			if (W_H_CNT(2 downto 0) = "111") then
+				HBLANK1   <= not W_H_BLn;
+			end if;
+			HBLANK2  <= HBLANK1;
+			HBLANK   <= HBLANK2;
+			VBLANK   <= not W_V_BLn;
 		end if;
 	end process;
 

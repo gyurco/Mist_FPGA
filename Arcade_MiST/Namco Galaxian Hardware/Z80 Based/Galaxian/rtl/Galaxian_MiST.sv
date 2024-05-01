@@ -180,11 +180,15 @@ always @(*) begin
 	end
 end
 
+//           1111111111222222222233333333334444444444555555555566
+// 01234567890123456789012345678901234567890123456789012345678901
+// 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+
 localparam CONF_STR = {
 	`NAME,";;",
 	"O1,Rotate Controls,Off,On;",
-	"O56,Orientation,Vertical,Clockwise,Anticlockwise;",
-	"O7,Rotation filter,Off,On;",
+	"OOP,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"OQ,Rotation filter,Off,On;",
 	"O23,Scanlines,Off,25%,50%,75%;",
 	"O4,Blend,Off,On;",
 	"DIP;",
@@ -195,8 +199,8 @@ localparam CONF_STR = {
 wire       rotate    = status[1];
 wire [1:0] scanlines = status[3:2];
 wire       blend     = status[4];
-wire [1:0] rotate_screen = status[6:5];
-wire       rotate_filter = status[7];
+wire [1:0] rotate_screen = status[25:24];
+wire       rotate_filter = status[26];
 
 assign LED = 1;
 assign AUDIO_R = AUDIO_L;
