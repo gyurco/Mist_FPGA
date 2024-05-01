@@ -430,7 +430,7 @@ set_global_assignment -name VERILOG_FILE ../rtl/dpram.v
 set_global_assignment -name VERILOG_FILE ../rtl/core.v
 set_global_assignment -name VERILOG_FILE ../rtl/clk_en.v
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jtopl/jt26.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jtopl/target/quartus/jt26.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
 
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

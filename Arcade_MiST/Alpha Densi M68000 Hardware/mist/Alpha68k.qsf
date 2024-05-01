@@ -212,9 +212,9 @@ set_global_assignment -name VERILOG_FILE ../rtl/chip_select.v
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/68000/FX68k/fx68k.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/JT12/hdl/jt03.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jtopl/jt2413.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/JT49/jt49.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt12/target/quartus/jt03.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jtopl/target/quartus/jt2413.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt49/syn/quartus/jt49.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
 set_global_assignment -name AUTO_SHIFT_REGISTER_RECOGNITION OFF
 set_global_assignment -name CDF_FILE output_files/Alpha68k.cdf

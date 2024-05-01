@@ -437,8 +437,8 @@ set_global_assignment -name QIP_FILE ../rtl/pll.qip
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name VERILOG_FILE ../../../common/CPU/MC6809/mc6809is.v
 set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/JT12/hdl/jt03.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/JT49/jt49.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt12/target/quartus/jt03.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt49/syn/quartus/jt49.qip
 
 set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

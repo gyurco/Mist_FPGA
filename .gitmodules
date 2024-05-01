@@ -1,3 +1,15 @@
 [submodule "common/mist"]
 	path = common/mist
 	url = https://github.com/mist-devel/mist-modules.git
+[submodule "common/Sound/jt12"]
+	path = common/Sound/jt12
+	url = https://github.com/jotego/jt12.git
+[submodule "common/Sound/jt49"]
+	path = common/Sound/jt49
+	url = https://github.com/jotego/jt49.git
+[submodule "common/Sound/jtopl"]
+	path = common/Sound/jtopl
+	url = https://github.com/jotego/jtopl.git
+[submodule "common/Sound/jt7759"]
+	path = common/Sound/jt7759
+	url = https://github.com/jotego/jt7759.git

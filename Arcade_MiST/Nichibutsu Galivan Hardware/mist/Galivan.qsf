@@ -246,7 +246,7 @@ set_global_assignment -name VERILOG_FILE ../rtl/core.v
 set_global_assignment -name VERILOG_FILE ../rtl/clk_en.v
 set_global_assignment -name VERILOG_FILE ../rtl/build_id.v
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jtopl/jt26.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jtopl/target/quartus/jt26.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
 set_global_assignment -name SIGNALTAP_FILE output_files/cpu.stp
 set_global_assignment -name SIGNALTAP_FILE output_files/spri.stp

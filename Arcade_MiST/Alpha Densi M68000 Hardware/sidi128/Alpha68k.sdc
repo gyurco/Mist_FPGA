@@ -86,8 +86,8 @@ set_input_delay -add_delay  -clock_fall -clock [get_clocks {SPI_SCK}]  1.000 [ge
 set_input_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -max 6.6 [get_ports SDRAM_DQ[*]]
 set_input_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -min 3.5 [get_ports SDRAM_DQ[*]]
 
-set_input_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -max 6.6 [get_ports SDRAM_DQ2[*]]
-set_input_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -min 3.5 [get_ports SDRAM_DQ2[*]]
+set_input_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -max 6.6 [get_ports SDRAM2_DQ[*]]
+set_input_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -min 3.5 [get_ports SDRAM2_DQ[*]]
 
 #**************************************************************
 # Set Output Delay

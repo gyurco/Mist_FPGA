@@ -1,4 +1,0 @@
-set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) common.qip]
-set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) jtopl.v]
-set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) jtopl_mmr.v]
-set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) jtopl_reg.v]

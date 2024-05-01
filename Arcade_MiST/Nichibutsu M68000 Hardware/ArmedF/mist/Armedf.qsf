@@ -216,7 +216,7 @@ set_global_assignment -name QIP_FILE ../../../../common/mist/mist.qip
 set_global_assignment -name QIP_FILE ../../../../common/CPU/68000/FX68k/fx68k.qip
 set_global_assignment -name QIP_FILE ../../../../common/CPU/T80/T80.qip
 set_global_assignment -name QIP_FILE ../../../../common/CPU/MC8051/mc8051.qip
-set_global_assignment -name QIP_FILE ../../../../common/Sound/jtopl/jtopl2.qip
+set_global_assignment -name QIP_FILE ../../../../common/Sound/jtopl/target/quartus/jtopl2.qip
 set_global_assignment -name CDF_FILE output_files/Chain1.cdf
 set_global_assignment -name SIGNALTAP_FILE output_files/armedf.stp
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
