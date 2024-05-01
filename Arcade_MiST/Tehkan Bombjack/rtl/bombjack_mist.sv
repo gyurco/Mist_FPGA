@@ -282,7 +282,8 @@ data_io data_io(
 	.ioctl_addr    ( ioctl_addr   ),
 	.ioctl_dout    ( ioctl_dout   )
 );
-wire [24:0] bg_ioctl_addr = ioctl_addr - 16'he000;
+wire [24:0] bg_ioctl_addr  = ioctl_addr - 16'h6000;
+wire [24:0] cpu_ioctl_addr = ioctl_addr - 16'hc000;
 	
 reg port1_req, port2_req;
 sdram sdram(
@@ -292,8 +293,8 @@ sdram sdram(
 
 	.port1_req     ( port1_req    ),
 	.port1_ack     ( ),
-	.port1_a       ( ioctl_addr[23:1] ),
-	.port1_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
+	.port1_a       ( cpu_ioctl_addr[23:1] ),
+	.port1_ds      ( {cpu_ioctl_addr[0], ~cpu_ioctl_addr[0]} ),
 	.port1_we      ( ioctl_downl ),
 	.port1_d       ( {ioctl_dout, ioctl_dout} ),
 	.port1_q       ( ),
@@ -306,7 +307,7 @@ sdram sdram(
 	// port2 for sprite graphics
 	.port2_req     ( port2_req ),
 	.port2_ack     ( ),
-	.port2_a       ( {bg_ioctl_addr[12:0], bg_ioctl_addr[14]} ), // merge sprite roms to 32-bit wide words
+	.port2_a       ( {bg_ioctl_addr[20:15], bg_ioctl_addr[12:0], bg_ioctl_addr[14]} ), // merge sprite roms to 32-bit wide words
 	.port2_ds      ( {bg_ioctl_addr[13], ~bg_ioctl_addr[13]} ),
 	.port2_we      ( ioctl_downl ),
 	.port2_d       ( {ioctl_dout, ioctl_dout} ),
