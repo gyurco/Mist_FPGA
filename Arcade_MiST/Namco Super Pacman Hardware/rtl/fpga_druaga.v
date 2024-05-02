@@ -460,9 +460,21 @@ module cpucore
     input               nmi
 );
 
+reg [1:0] cnt;
+reg       E_en, Q_en;
+always @(posedge clk) begin
+	E_en <= 0;
+	Q_en <= 0;
+	cnt <= cnt + 1'd1;
+	if (cnt == 2'b00) E_en <= 1;
+	if (cnt == 2'b01) Q_en <= 1;
+end
 
-mc6809 cpu
+mc6809is cpu
 (
+	.CLK(clk),
+	.fallE_en(E_en),
+	.fallQ_en(Q_en),
    .D(data_in),
     .DOut(data_out),
    .ADDR(address),
@@ -471,12 +483,10 @@ mc6809 cpu
    .nIRQ(~irq),
    .nFIRQ(~firq),
    .nNMI(~nmi),
-   .EXTAL(clk),
+
    .nHALT(~halt),
    .nRESET(~rst),
 
-    .XTAL(1'b0),
-    .MRDY(1'b1),
     .nDMABREQ(1'b1)
 );
 assign vma = 1;

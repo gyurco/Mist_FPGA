@@ -139,6 +139,7 @@ architecture struct of pooyan is
  signal cpu_do     : std_logic_vector( 7 downto 0);
  signal cpu_wr_n   : std_logic;
  signal cpu_mreq_n : std_logic;
+ signal cpu_rfsh_n : std_logic;
  signal cpu_nmi_n  : std_logic;
 
  signal cpu_rom_do : std_logic_vector( 7 downto 0);
@@ -654,7 +655,7 @@ port map(
   IORQ_n  => open,
   RD_n    => open,
   WR_n    => cpu_wr_n,
-  RFSH_n  => open,
+  RFSH_n  => cpu_rfsh_n,
   HALT_n  => open,
   BUSAK_n => open,
   A       => cpu_addr,
@@ -664,7 +665,7 @@ port map(
 
 roms_addr <= cpu_addr(14 downto 0);
 cpu_rom_do <= roms_do;
-roms_rd <= '1';
+roms_rd <= cpu_rfsh_n and not cpu_addr(15);
 
 -- working/char RAM   0x8000-0x8FFF
 wram : entity work.gen_ram

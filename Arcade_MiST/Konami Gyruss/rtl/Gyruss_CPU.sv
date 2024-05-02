@@ -961,7 +961,7 @@ spram #(4, 8) u7B
 //----------------------------------------------------- Final video output -----------------------------------------------------//
 
 //Generate HBlank (active high) while the horizontal counter is between 141 and 268
-wire hblk = (h_cnt > 140 && h_cnt < 269);
+wire hblk = (h_cnt > 141 && h_cnt < 270);
 
 //Multiplex tile and sprite data
 wire tile_sprite_sel = (tilemap_en | sprite_D[4]);

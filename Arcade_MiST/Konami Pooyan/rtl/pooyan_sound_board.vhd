@@ -218,7 +218,7 @@ end process;
 			
 -- divide clocks 
 -- random generator ?
-process (clock_14)
+process (clock_14, reset)
 begin
 	if reset='1' then
 		clock_div1 <= (others =>'0');
