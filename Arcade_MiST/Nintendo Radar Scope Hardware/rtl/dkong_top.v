@@ -41,9 +41,9 @@ module dkong_top
 	input  I_PESTPLCE,
 	
 	//    VGA (VIDEO) IF
-	output [3:0]O_VGA_R,
-	output [3:0]O_VGA_G,
-	output [3:0]O_VGA_B,
+	output reg [3:0]O_VGA_R,
+	output reg [3:0]O_VGA_G,
+	output reg [3:0]O_VGA_B,
 	output reg O_H_BLANK,
 	output O_V_BLANK,
 	output O_VGA_H_SYNCn,
@@ -488,9 +488,12 @@ wire       W_STAR = W_L_CMPBLKn & W_NOISE & ~W_STARn & I_RADARSCP;
 wire [4:0] W_RED_TOTAL = W_RED + {W_GRID[0] | W_STAR, 3'b000};
 wire [4:0] W_GREEN_TOTAL = W_GREEN + {W_GRID[1] & ~W_STAR, 3'b000};
 wire [4:0] W_BLUE_TOTAL = W_BLUE + {W_GRID[2] & ~W_STAR, I_RADARSCP & W_L_CMPBLKn, I_RADARSCP & W_L_CMPBLKn, 1'b0};
-assign O_VGA_R = W_RED_TOTAL[4] ? 4'hF : W_RED_TOTAL[3:0];
-assign O_VGA_G = W_GREEN_TOTAL[4] ? 4'hF : W_GREEN_TOTAL[3:0];
-assign O_VGA_B = W_BLUE_TOTAL[4] ? 4'hF : W_BLUE_TOTAL[3:0];
+
+always @(posedge W_CLK_24576M) if (W_CLK_12288M & !W_H_CNT[0]) begin
+	O_VGA_R <= W_RED_TOTAL[4] ? 4'hF : W_RED_TOTAL[3:0];
+	O_VGA_G <= W_GREEN_TOTAL[4] ? 4'hF : W_GREEN_TOTAL[3:0];
+	O_VGA_B <= W_BLUE_TOTAL[4] ? 4'hF : W_BLUE_TOTAL[3:0];
+end
 
 dkong_col_pal cpal
 (

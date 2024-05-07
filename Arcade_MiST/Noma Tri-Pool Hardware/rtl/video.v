@@ -97,7 +97,7 @@ wire sc2 = spr_data2[xp^{3{~sp_data3[7]}}];
 wire [7:0] yy = vflip ? 8'd250 - sp_data0^{8{vflip}} : 8'd255 - sp_data0^{8{vflip}};
 reg [7:0] xx;
 reg [2:0] xp;
-wire [2:0] yp = vflip ? vc - yy - 1 : yy - vc;
+wire [2:0] yp = vflip ? vc - yy - 1'd1 : yy - vc;
 reg [7:0] xcl;
 reg render;
 always @(posedge clk_sys) begin

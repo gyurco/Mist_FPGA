@@ -53,9 +53,11 @@ set_time_format -unit ns -decimal_places 3
 
 create_clock -name {SPI_SCK}  -period 41.666 -waveform { 20.8 41.666 } [get_ports {SPI_SCK}]
 
-set sys_clk   "pll|altpll_component|auto_generated|pll1|clk[1]"
-set sdram_clk "pll|altpll_component|auto_generated|pll1|clk[0]"
-set aud_clk   "pll|altpll_component|auto_generated|pll1|clk[1]"
+set sys_clk    "pll|altpll_component|auto_generated|pll1|clk[1]"
+set sdram_clk  "pll|altpll_component|auto_generated|pll1|clk[0]"
+set aud_clk    "pll|altpll_component|auto_generated|pll1|clk[1]"
+
+set sdram2_clk "pll2|altpll_component|auto_generated|pll1|clk[0]"
 #**************************************************************
 # Create Generated Clock
 #**************************************************************
@@ -85,6 +87,9 @@ set_input_delay -add_delay  -clock_fall -clock [get_clocks {SPI_SCK}]  1.000 [ge
 set_input_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -max 6.6 [get_ports SDRAM_DQ[*]]
 set_input_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -min 3.5 [get_ports SDRAM_DQ[*]]
 
+set_input_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -max 6.6 [get_ports SDRAM2_DQ[*]]
+set_input_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -min 3.5 [get_ports SDRAM2_DQ[*]]
+
 #**************************************************************
 # Set Output Delay
 #**************************************************************
@@ -93,10 +98,13 @@ set_output_delay -clock [get_clocks {SPI_SCK}] 1.000 [get_ports {SPI_DO}]
 set_output_delay -clock [get_clocks $aud_clk]  1.000 [get_ports {AUDIO_L}]
 set_output_delay -clock [get_clocks $aud_clk]  1.000 [get_ports {AUDIO_R}]
 set_output_delay -clock [get_clocks $sys_clk]  1.000 [get_ports {LED}]
-set_output_delay -clock [get_clocks $sys_clk]  1.000 [get_ports {VGA_*}]
+set_output_delay -clock [get_clocks $sdram2_clk]  1.000 [get_ports {VGA_*}]
 
 set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -max 1.5 [get_ports {SDRAM_D* SDRAM_A* SDRAM_BA* SDRAM_n* SDRAM_CKE}]
 set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -min -0.8 [get_ports {SDRAM_D* SDRAM_A* SDRAM_BA* SDRAM_n* SDRAM_CKE}]
+
+set_output_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -max 1.5 [get_ports {SDRAM2_D* SDRAM2_A* SDRAM2_BA* SDRAM2_n* SDRAM2_CKE}]
+set_output_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRAM2_CLK}] -min -0.8 [get_ports {SDRAM2_D* SDRAM2_A* SDRAM2_BA* SDRAM2_n* SDRAM2_CKE}]
 
 #**************************************************************
 # Set Clock Groups

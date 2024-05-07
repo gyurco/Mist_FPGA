@@ -21,6 +21,7 @@ module fpga_nrx
 
 	output [14:0] cpu_rom_addr,
 	input   [7:0] cpu_rom_data,
+	output        cpu_rom_oe,
 
 	output  [7:0] SND,   // Sound (unsigned PCM)
 
@@ -110,6 +111,8 @@ wire vid_Rce;
 wire [7:0]	romdata;
 assign cpu_rom_addr = ad[14:0];
 assign romdata = cpu_rom_data;
+assign cpu_rom_oe = rom_Rce | rom_Rce2;
+
 /*
 dpram #(8,14) nrx_prg_rom(
 	.clk_a(CLK),

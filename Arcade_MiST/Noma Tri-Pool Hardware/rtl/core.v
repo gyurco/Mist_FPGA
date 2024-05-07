@@ -19,9 +19,10 @@ module core(
 	output [9:0] sound,
   
 	output [13:0] mcpu_rom1_addr,
-	input [7:0] mcpu_rom1_data,
-	output [13:0] mcpu_rom2_addr,
-	input [7:0] mcpu_rom2_data,
+	input   [7:0] mcpu_rom1_data,
+	output        mcpu_rom1_oe,
+//	output [13:0] mcpu_rom2_addr,
+//	input [7:0] mcpu_rom2_data,
 	 
 	input        ioctl_download,
 	input [26:0] ioctl_addr,
@@ -70,7 +71,7 @@ wire        scpu_ay_data_en;
 wire        scpu_ay_addr_en;
 
 //wire [7:0] mcpu_rom1_data;
-//wire [7:0] mcpu_rom2_data;
+wire [7:0] mcpu_rom2_data;
 wire [7:0] mcpu_ram_data;
 wire [7:0] mcpu_vdata;
 reg  [7:0] mcpu_sndlatch;
@@ -207,6 +208,7 @@ decrypt_mcpu decrypt_mcpu(
 );
 
 assign mcpu_rom1_addr = mcpu_ab[13:0];
+assign mcpu_rom1_oe = mcpu_rom1_en;
 
 
 //mcpu_rom1 mcpu_rom1(
@@ -219,17 +221,17 @@ assign mcpu_rom1_addr = mcpu_ab[13:0];
 //  .ioctl_wr       ( ioctl_wr       )
 //);
 
-assign mcpu_rom2_addr = mcpu_ab[13:0];
+//assign mcpu_rom2_addr = mcpu_ab[13:0];
 
-//mcpu_rom2 mcpu_rom2(
-//  .clk_sys        ( clk_sys        ),
-//  .rom_data       ( mcpu_rom2_data ),
-//  .cpu_ab         ( mcpu_ab        ),
-//  .ioctl_download ( ioctl_download ),
-//  .ioctl_addr     ( ioctl_addr     ),
-//  .ioctl_dout     ( ioctl_dout     ),
-//  .ioctl_wr       ( ioctl_wr       )
-//);
+mcpu_rom2 mcpu_rom2(
+  .clk_sys        ( clk_sys        ),
+  .rom_data       ( mcpu_rom2_data ),
+  .cpu_ab         ( mcpu_ab        ),
+  .ioctl_download ( ioctl_download ),
+  .ioctl_addr     ( ioctl_addr     ),
+  .ioctl_dout     ( ioctl_dout     ),
+  .ioctl_wr       ( ioctl_wr       )
+);
 
 scpu_rom scpu_rom(
   .clk_sys        ( clk_sys        ),

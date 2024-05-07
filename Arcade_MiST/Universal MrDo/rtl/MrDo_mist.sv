@@ -146,6 +146,8 @@ assign SDRAM2_nWE = 1;
 localparam CONF_STR = {
 	"MRDO;;",
 	"O2,Rotate Controls,Off,On;",
+	"OWX,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"OY,Rotation filter,Off,On;",
 	"O34,Scandoubler Fx,None,CRT 25%,CRT 50%,CRT 75%;",
 	"O5,Blend,Off,On;",
 	"O6,Flip,Off,On;",
@@ -160,6 +162,8 @@ wire        rotate = status[2];
 wire  [1:0] scanlines = status[4:3];
 wire        blend     = status[5];
 wire        user_flip = status[6];
+wire  [1:0] rotate_screen = status[33:32];
+wire        rotate_filter = status[34];
 
 wire  [7:0] dsw1 = status[15:8];
 wire  [7:0] dsw2 = status[23:16];
@@ -168,16 +172,17 @@ assign 		LED = ~ioctl_downl;
 assign 		SDRAM_CLK = mem_clk;
 assign      SDRAM_CKE = 1;
 
-wire mem_clk, sys_clk, pll_locked;
+wire mem_clk, vid_clk, sys_clk, pll_locked;
 
 pll pll(
 	.inclk0(CLOCK_27),
 	.c0(mem_clk),
-	.c1(sys_clk),
+	.c1(vid_clk),
+	.c2(sys_clk),
 	.locked(pll_locked)
 );
 	
-wire [31:0] status;
+wire [63:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
 wire  [7:0] joystick_0;
@@ -240,6 +245,7 @@ wire        blankn = ~(hb | vb);
 wire [3:0] 	r, g, b;
 wire [14:0] rom_addr;
 wire [15:0] rom_do;
+wire        rom_oe;
 wire        ioctl_downl;
 wire  [7:0] ioctl_index;
 wire        ioctl_wr;
@@ -259,7 +265,7 @@ data_io data_io(
 );
 
 reg port1_req;
-
+/*
 sdram #(.MHZ(40)) sdram(
 	.*,
 	.init_n        ( pll_locked   ),
@@ -278,7 +284,7 @@ sdram #(.MHZ(40)) sdram(
 	.cpu1_addr     ( ioctl_downl ? 17'h1ffff : { 3'b000, rom_addr[14:1] } ),
 	.cpu1_q        ( rom_do )
 );
-
+*/
 always @(posedge sys_clk) begin
 	reg        ioctl_wr_last = 0;
 
@@ -317,13 +323,14 @@ MrDo_top MrDo_top(
 	.dsw2(dsw2),
 	.rom_addr ( rom_addr ),
 	.rom_do   ( rom_addr[0] ? rom_do[15:8] : rom_do[7:0] ),
+	.rom_oe   ( rom_oe ),
     .dl_addr(ioctl_addr[15:0]),
     .dl_data(ioctl_dout),
     .dl_we(ioctl_wr)
 );
 
-mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
-	.clk_sys        ( sys_clk          ),
+mist_dual_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+	.clk_sys        ( mem_clk          ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
@@ -339,8 +346,42 @@ mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(VGA_BITS), .U
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
-	.ce_divider     ( 1'b1             ),
+`ifdef USE_HDMI
+	.HDMI_R         ( HDMI_R           ),
+	.HDMI_G         ( HDMI_G           ),
+	.HDMI_B         ( HDMI_B           ),
+	.HDMI_VS        ( HDMI_VS          ),
+	.HDMI_HS        ( HDMI_HS          ),
+	.HDMI_DE        ( HDMI_DE          ),
+`endif
+	.clk_sdram      ( mem_clk          ),
+	.sdram_init     ( ~pll_locked      ),
+	.SDRAM_A        ( SDRAM_A          ),
+	.SDRAM_DQ       ( SDRAM_DQ         ),
+	.SDRAM_DQML     ( SDRAM_DQML       ),
+	.SDRAM_DQMH     ( SDRAM_DQMH       ),
+	.SDRAM_nWE      ( SDRAM_nWE        ),
+	.SDRAM_nCAS     ( SDRAM_nCAS       ),
+	.SDRAM_nRAS     ( SDRAM_nRAS       ),
+	.SDRAM_nCS      ( SDRAM_nCS        ),
+	.SDRAM_BA       ( SDRAM_BA         ),
+
+	.ram_din        ( {ioctl_dout, ioctl_dout} ),
+	.ram_dout       ( ),
+	.ram_addr       ( ioctl_addr[22:1] ),
+	.ram_ds         ( { ioctl_addr[0], ~ioctl_addr[0] } ),
+	.ram_req        ( port1_req ),
+	.ram_we         ( ioctl_downl ),
+	.ram_ack        ( ),
+	.rom_oe         ( rom_oe ),
+	.rom_addr       ( rom_addr[14:1] ),
+	.rom_dout       ( rom_do ),
+
+	.ce_divider     ( 4'd15            ),
 	.rotate         ( { user_flip, rotate } ),
+	.rotate_screen  ( rotate_screen    ),
+	.rotate_hfilter ( rotate_filter    ),
+	.rotate_vfilter ( rotate_filter    ),
 	.scandoubler_disable( scandoublerD ),
 	.scanlines      ( scanlines        ),
 	.blend          ( blend            ),
@@ -350,7 +391,7 @@ mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(VGA_BITS), .U
 
 `ifdef USE_HDMI
 
-i2c_master #(10_000_000) i2c_master (
+i2c_master #(20_000_000) i2c_master (
 	.CLK         (sys_clk),
 
 	.I2C_START   (i2c_start),
@@ -367,33 +408,7 @@ i2c_master #(10_000_000) i2c_master (
  	.I2C_SDA     (HDMI_SDA)
 );
 
-mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(8), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) hdmi_video(
-	.clk_sys        ( mem_clk          ),
-	.SPI_SCK        ( SPI_SCK          ),
-	.SPI_SS3        ( SPI_SS3          ),
-	.SPI_DI         ( SPI_DI           ),
-	.R              ( r                ),
-	.G              ( g                ),
-	.B              ( b                ),
-	.HBlank         ( hb               ),
-	.VBlank         ( vb               ),
-	.HSync          ( hs               ),
-	.VSync          ( vs               ),
-	.VGA_R          ( HDMI_R           ),
-	.VGA_G          ( HDMI_G           ),
-	.VGA_B          ( HDMI_B           ),
-	.VGA_VS         ( HDMI_VS          ),
-	.VGA_HS         ( HDMI_HS          ),
-	.VGA_DE         ( HDMI_DE          ),
-	.ce_divider     ( 3'd0             ),
-	.rotate         ( { user_flip, rotate } ),
-	.scandoubler_disable( 1'b0         ),
-	.scanlines      ( scanlines        ),
-	.blend          ( blend            ),
-	.ypbpr          ( 1'b0             ),
-	.no_csync       ( 1'b1             )
-);
-assign HDMI_PCLK = mem_clk;
+assign HDMI_PCLK = vid_clk;
 `endif
 
 dac #(.C_bits(16))dacl(
@@ -414,7 +429,7 @@ dac #(.C_bits(16))dacr(
 i2s i2s (
 	.reset(1'b0),
 	.clk(mem_clk),
-	.clk_rate(32'd40_000_000),
+	.clk_rate(32'd80_000_000),
 	.sclk(I2S_BCK),
 	.lrclk(I2S_LRCK),
 	.sdata(I2S_DATA),
@@ -435,7 +450,7 @@ end
 spdif spdif (
 	.rst_i(1'b0),
 	.clk_i(mem_clk),
-	.clk_rate_i(32'd40_000_000),
+	.clk_rate_i(32'd80_000_000),
 	.spdif_o(SPDIF),
 	.sample_i({2'd0, audio1, 6'd0, 2'd0, audio2, 6'd0})
 );
@@ -453,7 +468,7 @@ arcade_inputs inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( {user_flip, 1'b1} ),
+	.orientation ( {user_flip, ~|rotate_screen} ),
 	.joyswap     ( 1'b0        ),
 	.oneplayer   ( 1'b1        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),

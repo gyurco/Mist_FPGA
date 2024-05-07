@@ -16,6 +16,7 @@ input 		[7:0] p2,
 input 		[7:0] dsw1,
 input 		[7:0] dsw2,
 output		[14:0] rom_addr,
+output            rom_oe,
 input 		[7:0] rom_do,
 input       [15:0] dl_addr,
 input       [7:0] dl_data,
@@ -674,12 +675,13 @@ always @ (posedge clk_20M ) begin
 end
 
 reg [15:0] unhandled_addr ;
+assign rom_oe = !cpu_addr[15] & rfsh_n;
 
 always @ (posedge clk_20M ) begin
     
     if ( rd_n == 0 ) begin
         // read program rom
-        if ( cpu_addr >= 16'h0000 && cpu_addr < 16'h8000 ) begin
+        if ( rom_oe ) begin
             cpu_din <= rom_do; // 0x0000
         end else if ( cpu_addr >= 16'h8000 && cpu_addr < 16'h8400 ) begin   
             cpu_din <= bg_ram0_data;
@@ -774,7 +776,7 @@ secret_pal u001
 // bit 5-0 == 64 colors from palette
 // bytes 256-511 are tile index
 
-    
+wire rfsh_n;    
 wire wr_n;
 wire rd_n;
 
@@ -794,6 +796,7 @@ T80pa u_cpu(
     .BUSRQ_n    ( 1'b1       ),
     .RD_n       ( rd_n       ),
     .WR_n       ( wr_n       ),
+    .RFSH_n     ( rfsh_n     ),
     .A          ( cpu_addr   ),
     .DI         ( cpu_din    ),
     .DO         ( cpu_dout   )
