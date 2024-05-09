@@ -128,6 +128,7 @@ localparam bit BIG_OSD = 0;
 `endif
 
 // remove this if the 2nd chip is actually used
+/*
 `ifdef DUAL_SDRAM
 assign SDRAM2_A = 13'hZZZZ;
 assign SDRAM2_BA = 0;
@@ -141,12 +142,17 @@ assign SDRAM2_nCAS = 1;
 assign SDRAM2_nRAS = 1;
 assign SDRAM2_nWE = 1;
 `endif
+*/
 
 `include "build_id.v"
 
 localparam CONF_STR = {
 	"XEVIOUS;;",
 	"O2,Rotate Controls,Off,On;",
+`ifdef DUAL_SDRAM
+	"OWX,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"OY,Rotation filter,Off,On;",
+`endif
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
 	`SEP
@@ -161,6 +167,8 @@ wire  [1:0] scanlines = status[4:3];
 wire        blend     = status[5];
 wire  [7:0] dipA      = status[15:8];
 wire  [7:0] dipB      = status[23:16];
+wire  [1:0] rotate_screen = status[33:32];
+wire        rotate_filter = status[34];
 
 wire  [6:0] core_mod;
 
@@ -181,7 +189,17 @@ pll pll(
 
 wire        clk_sys = clk_18;
 wire        clk_mem = clk_72;
-wire        clk_vid = clk_36;
+wire        clk_vid = clk_72;
+
+`ifdef DUAL_SDRAM
+wire pll2_locked;
+pll pll2(
+	.inclk0(CLOCK_27),
+	.c0(SDRAM2_CLK),
+	.locked(pll2_locked)
+	);
+assign SDRAM2_CKE = 1;
+`endif
 
 reg         rom_loaded = 0;
 reg         reset = 1;
@@ -194,7 +212,7 @@ always @(posedge clk_sys) begin
 	reset <= status[0] | buttons[1] | ioctl_downl | ~rom_loaded;
 end
 
-wire [31:0] status;
+wire [63:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
 wire  [7:0] joystick_0;
@@ -398,7 +416,7 @@ xevious xevious(
 	.dl_data(ioctl_dout)
 	);
 
-mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+mist_dual_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys(clk_vid),
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
@@ -415,8 +433,32 @@ mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .U
 	.VGA_B(VGA_B),
 	.VGA_VS(VGA_VS),
 	.VGA_HS(VGA_HS),
-	.ce_divider(3'd0),
+`ifdef USE_HDMI
+	.HDMI_R         ( HDMI_R           ),
+	.HDMI_G         ( HDMI_G           ),
+	.HDMI_B         ( HDMI_B           ),
+	.HDMI_VS        ( HDMI_VS          ),
+	.HDMI_HS        ( HDMI_HS          ),
+	.HDMI_DE        ( HDMI_DE          ),
+`endif
+`ifdef DUAL_SDRAM
+	.clk_sdram      ( clk_vid          ),
+	.sdram_init     ( ~pll2_locked     ),
+	.SDRAM_A        ( SDRAM2_A         ),
+	.SDRAM_DQ       ( SDRAM2_DQ        ),
+	.SDRAM_DQML     ( SDRAM2_DQML      ),
+	.SDRAM_DQMH     ( SDRAM2_DQMH      ),
+	.SDRAM_nWE      ( SDRAM2_nWE       ),
+	.SDRAM_nCAS     ( SDRAM2_nCAS      ),
+	.SDRAM_nRAS     ( SDRAM2_nRAS      ),
+	.SDRAM_nCS      ( SDRAM2_nCS       ),
+	.SDRAM_BA       ( SDRAM2_BA        ),
+`endif
+	.ce_divider(4'd11),
 	.rotate({1'b1,rotate}),
+	.rotate_screen  ( rotate_screen    ),
+	.rotate_hfilter ( rotate_filter    ),
+	.rotate_vfilter ( rotate_filter    ),
 	.scanlines(scanlines),
 	.blend(blend),
 	.scandoubler_disable(scandoublerD),
@@ -442,33 +484,7 @@ i2c_master #(18_000_000) i2c_master (
  	.I2C_SDA     (HDMI_SDA)
 );
 
-mist_video #(.COLOR_DEPTH(4), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(8), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) hdmi_video(
-	.clk_sys(clk_vid),
-	.SPI_SCK(SPI_SCK),
-	.SPI_SS3(SPI_SS3),
-	.SPI_DI(SPI_DI),
-	.R(r),
-	.G(g),
-	.B(b),
-	.HSync(hs),
-	.VSync(vs),
-	.HBlank(~blankn),
-	.VBlank(~vs),
-	.VGA_R(HDMI_R),
-	.VGA_G(HDMI_G),
-	.VGA_B(HDMI_B),
-	.VGA_VS(HDMI_VS),
-	.VGA_HS(HDMI_HS),
-	.VGA_DE(HDMI_DE),
-	.ce_divider(3'd0),
-	.rotate({1'b1,rotate}),
-	.scanlines(scanlines),
-	.blend(blend),
-	.scandoubler_disable(1'b0),
-	.ypbpr(1'b0),
-	.no_csync(1'b1)
-	);
-assign HDMI_PCLK = clk_vid;
+assign HDMI_PCLK = clk_36;
 `endif
 
 dac #(
@@ -523,7 +539,7 @@ arcade_inputs inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( 2'b11       ),
+	.orientation ( {1'b1, ~|rotate_screen} ),
 	.joyswap     ( 1'b0        ),
 	.oneplayer   ( 1'b1        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),

@@ -329,7 +329,6 @@ mist_dual_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS
 	.HDMI_HS        ( HDMI_HS          ),
 	.HDMI_DE        ( HDMI_DE          ),
 `endif
-`ifdef DUAL_SDRAM
 	.clk_sdram      ( clk_sys          ),
 	.sdram_init     ( ~pll_locked      ),
 	.SDRAM_A        ( SDRAM_A          ),
@@ -341,7 +340,7 @@ mist_dual_video #(.COLOR_DEPTH(3), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS
 	.SDRAM_nRAS     ( SDRAM_nRAS       ),
 	.SDRAM_nCS      ( SDRAM_nCS        ),
 	.SDRAM_BA       ( SDRAM_BA         ),
-`endif
+
 	.ce_divider     ( 4'd7             ),
 	.rotate         ( { orientation[1], rotate } ),
 	.rotate_screen  ( rotate_screen    ),
