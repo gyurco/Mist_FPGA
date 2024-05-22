@@ -234,6 +234,7 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 # end ENTITY(IremM92_MiST)
 # ---------------------------
 set_location_assignment PLL_1 -to pll|altpll_component|auto_generated|pll1
+set_instance_assignment -name GLOBAL_SIGNAL ON -to SPI_SCK
 set_global_assignment -name DSP_BLOCK_BALANCING "DSP BLOCKS"
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING OFF
 set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION OFF
@@ -247,6 +248,7 @@ set_global_assignment -name QIP_FILE ../rtl/pll_mist.qip
 set_global_assignment -name QIP_FILE ../rtl/m92.qip
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/v30/V30.qip
+set_global_assignment -name QIP_FILE ../../../common/CPU/v33/v33.qip
 set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/jt51.qip
 set_global_assignment -name VERILOG_MACRO "JT51_ONLYTIMERS=1"
 set_global_assignment -name VERILOG_MACRO "NO_EEPROM=1"

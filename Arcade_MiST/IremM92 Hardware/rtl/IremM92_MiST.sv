@@ -221,7 +221,7 @@ pll_mist pll(
 wire pll2_locked;
 pll_rot pll_rot(
 	.inclk0(CLOCK_27),
-	.c0(SDRAM2_CLK),
+	.c0(SDRAM2_CLK), // 80 MHz
 	.locked(pll2_locked)
 	);
 assign SDRAM2_CKE = 1;
@@ -723,7 +723,7 @@ arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 	.joystick_2  ( joystick_2  ),
 	.joystick_3  ( joystick_3  ),
 	.rotate      ( rotate      ),
-	.orientation ( orientation[1] ^ {1'b0, ~|rotate_screen} ),
+	.orientation ( orientation ^ {1'b0, |rotate_screen} ),
 	.joyswap     ( joyswap     ),
 	.oneplayer   ( oneplayer   ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),

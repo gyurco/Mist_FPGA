@@ -36,7 +36,8 @@ module address_translator
     output buffer_memrq,
     output sprite_control_memrq,
     output video_control_memrq,
-	output eeprom_memrq
+    output eeprom_memrq,
+    output timer_memrq
 );
 
 wire [3:0] bank_a19_16 = ( bank_select & board_cfg.bank_mask ) | ( A[19:16] & ~board_cfg.bank_mask );
@@ -74,6 +75,8 @@ always_comb begin
 			ram_rom_memrq = 1;
 			writable = 1;
 			sdr_addr = { REGION_VRAM.base_addr[24:16], A[15:0] };
+		//end else if (board_cfg.debug_board && A[19:16] == 4'hb) begin
+			//timer_memrq = 1;
 		end else begin
 			ram_rom_memrq = 1;
 			writable = 0;

@@ -54,6 +54,8 @@ module m92 (
     input pause_rq,
     output cpu_paused,
 
+    input cpu_turbo,
+
     output [24:0] sdr_vram_addr,
     input [31:0] sdr_vram_data,
     output sdr_vram_req,
@@ -140,7 +142,7 @@ assign cpu_paused = paused;
 
 always @(posedge clk_sys) begin
     if (pause_rq & ~paused) begin
-        if (~cpu_mem_read & ~cpu_mem_write & ~mem_rq_active & vpulse) begin
+        if (~MRD & ~MWR & ~mem_rq_active & vpulse) begin
             paused <= 1;
         end
     end else if (~pause_rq & paused) begin
@@ -174,85 +176,90 @@ wire dma_busy;
 wire [15:0] cpu_mem_out;
 wire [19:0] cpu_mem_addr;
 wire [1:0] cpu_mem_sel;
-
-// v30 bus read/write signals are only asserted for a single clock cycle, so latch them for an additional one
-reg cpu_mem_read_lat, cpu_mem_write_lat;
-wire cpu_mem_read_w, cpu_mem_write_w;
-wire cpu_mem_read = cpu_mem_read_w | cpu_mem_read_lat;
-wire cpu_mem_write = cpu_mem_write_w | cpu_mem_write_lat;
-
-wire cpu_io_read, cpu_io_write;
-wire [7:0] cpu_io_in;
-wire [7:0] cpu_io_out;
-wire [7:0] cpu_io_addr;
-
 wire [15:0] cpu_mem_in;
 
 /* Global signals from schematics */
-wire IOWR = cpu_io_write; // IO Write
-wire IORD = cpu_io_read; // IO Read
-wire MWR = cpu_mem_write; // Mem Write
-wire MRD = cpu_mem_read; // Mem Read
+wire cpu_n_dstb, cpu_busst0, cpu_busst1, cpu_n_bcyst;
+wire cpu_n_ube, cpu_r_w, cpu_m_io;
 
+wire IOWR = ~cpu_m_io & ~cpu_r_w & ~cpu_busst1 & cpu_busst0 & ~cpu_n_dstb; // IO Write
+wire IORD = ~cpu_m_io & cpu_r_w & ~cpu_busst1 & cpu_busst0; // IO Read
+wire MWR = cpu_m_io & ~cpu_r_w & ~cpu_busst1 & cpu_busst0 & ~cpu_n_dstb; // Mem Write
+wire MRD = cpu_m_io & cpu_r_w & ~cpu_busst1; // Mem Read
 
-wire [15:0] cpu_word_out = cpu_mem_addr[0] ? { cpu_mem_out[7:0], 8'h00 } : cpu_mem_out;
-wire [1:0] cpu_word_byte_sel = cpu_mem_addr[0] ? { cpu_mem_sel[0], 1'b0 } : cpu_mem_sel;
-reg  [15:0] cpu_ram_rom_data;
-wire [24:0] cpu_region_addr;
-wire cpu_region_writable;
+wire INTACK = ~cpu_m_io & cpu_r_w & ~cpu_busst1 & ~cpu_busst0 & ~cpu_n_dstb;
 
-wire ram_rom_memrq;
+wire [19:0] cpu_word_addr = { cpu_mem_addr[19:1], 1'b0 };
+
+wire cpu_ram_rom_memrq;
 wire buffer_memrq;
 wire sprite_control_memrq;
 wire video_control_memrq;
 wire eeprom_memrq;
 wire banked_memrq;
+wire timer_memrq;
 
 wire [7:0] snd_latch_dout;
 wire snd_latch_rdy;
 
-reg [1:0] ce_counter_cpu;
-reg ce_cpu, ce_4x_cpu;
-reg mem_rq_active = 0;
+reg [15:0] cpu_cycle_timer;
+reg [15:0] deferred_ce;
+reg ce_toggle;
+reg ce_1, ce_2;
+wire ga23_busy;
+wire cpu_ram_rom_ready = !mem_rq_active;
+reg  [15:0] cpu_ram_rom_data;
+wire [24:0] cpu_region_addr;
+wire cpu_region_writable;
 
-always @(posedge clk_sys, negedge reset_n) begin
+wire ce_1_cpu = ce_1 & cpu_ram_rom_ready;
+wire ce_2_cpu = ce_2 & cpu_ram_rom_ready;
+
+always @(posedge clk_sys) begin
     if (!reset_n) begin
-        ce_cpu <= 0;
-        ce_4x_cpu <= 0;
-        ce_counter_cpu <= 0;
+        ce_1 <= 0;
+        ce_2 <= 0;
+        ce_toggle <= 0;
+        deferred_ce <= 16'd0;
     end else begin
-        ce_cpu <= 0;
-        ce_4x_cpu <= 0;
+        ce_1 <= 0;
+        ce_2 <= 0;
 
-        if (~paused) begin
-            if (~((ram_rom_memrq) & (cpu_mem_read | cpu_mem_write)) & ~mem_rq_active) begin // stall main cpu while fetching from sdram
-                ce_counter_cpu <= ce_counter_cpu + 2'd1;
-                ce_4x_cpu <= 1;
-                ce_cpu <= &ce_counter_cpu;
+        if (ce_18m) begin
+            if (~cpu_ram_rom_ready) begin
+                deferred_ce <= deferred_ce + 16'd1;
+            end else if (|deferred_ce) begin 
+                deferred_ce <= deferred_ce - 16'd1;
             end
+        end
+
+        if (~paused & (ce_18m | cpu_turbo | (cpu_ram_rom_ready & |deferred_ce))) begin
+            ce_toggle <= ~ce_toggle;
+            ce_1 <= ce_toggle;
+            ce_2 <= ~ce_toggle;
         end
     end
 end
 
-function [15:0] word_shuffle(input [19:0] addr, input [15:0] data);
-    begin
-        word_shuffle = addr[0] ? { 8'h00, data[15:8] } : data;
-    end
-endfunction
+always @(posedge clk_sys) begin
+    if (ce_1_cpu) cpu_cycle_timer <= cpu_cycle_timer + 16'd1;
+end
 
-always_ff @(posedge clk_sys or negedge reset_n) begin
+reg mem_rq_active = 0;
+reg cpu_n_bcyst_d;
+
+always_ff @(posedge clk_sys) begin
     if (!reset_n) begin
         mem_rq_active <= 0;
     end else begin
-        cpu_mem_read_lat <= cpu_mem_read_w;
-        cpu_mem_write_lat <= cpu_mem_write_w;
+		cpu_n_bcyst_d <= ~(MRD | MWR) | cpu_n_bcyst;
         if (!mem_rq_active) begin
-            if (ram_rom_memrq & ((cpu_mem_read_w & ~cpu_mem_read_lat) | (cpu_mem_write_w & ~cpu_mem_write_lat))) begin // sdram request
+            if ((MRD | MWR) & cpu_ram_rom_memrq & !cpu_n_bcyst & cpu_n_bcyst_d) begin // sdram request
                 sdr_cpu_wr_sel <= 2'b00;
                 sdr_cpu_addr <= cpu_region_addr;
-                if (cpu_mem_write & cpu_region_writable ) begin
-                    sdr_cpu_wr_sel <= cpu_word_byte_sel;
-                    sdr_cpu_din <= cpu_word_out;
+                if (MWR & cpu_region_writable ) begin
+                    sdr_cpu_wr_sel <= {~cpu_n_ube, ~cpu_mem_addr[0]};
+                    sdr_cpu_din <= cpu_mem_out;
                 end
                 sdr_cpu_req <= ~sdr_cpu_req;
                 mem_rq_active <= 1;
@@ -263,7 +270,6 @@ always_ff @(posedge clk_sys or negedge reset_n) begin
         end
     end
 end
-
 wire rom0_ce, rom1_ce, ram_cs2;
 
 reg [7:0] dbg_io_latch;
@@ -299,10 +305,19 @@ wire BRQ = ~sys_flags[4];
 wire BANK = sys_flags[5];
 wire NL = SOFT_NL ^ ~dip_sw[8];
 
+reg sound_reset = 0;
+
 // TODO BANK, CBLK, NL
 always @(posedge clk_sys) begin
-    if (IOWR && cpu_io_addr == 8'h02) sys_flags <= cpu_io_out[7:0];
-    if (IOWR && cpu_io_addr == 8'h20) bank_select <= cpu_io_out[3:0];
+    if (~reset_n) begin
+        sys_flags <= 8'd0;
+        bank_select <= 4'd0;
+        sound_reset <= 1'd0;
+    end else begin
+        if (IOWR && cpu_word_addr == 8'h02) sys_flags <= cpu_mem_out[7:0];
+        if (IOWR && cpu_word_addr == 8'h20) bank_select <= cpu_mem_out[3:0];
+        if (IOWR && cpu_word_addr == 8'hc0) sound_reset <= ~cpu_mem_out[0];
+    end
 end
 
 reg [15:0] vid_ctrl;
@@ -310,7 +325,7 @@ always @(posedge clk_sys or negedge reset_n) begin
     if (~reset_n) begin
         vid_ctrl <= 0;
     end else if (video_control_memrq & MWR) begin
-        vid_ctrl <= cpu_word_out;
+        vid_ctrl <= cpu_mem_out;
     end
 end
 
@@ -337,67 +352,70 @@ wire [7:0] eeprom_dout;
 
 // mux io and memory reads
 always_comb begin
-    bit [15:0] d16;
-    bit [15:0] io16;
-
-    if (buffer_memrq) d16 = ga21_dout;
-    else if(eeprom_memrq) d16 = { eeprom_dout, eeprom_dout };
-    else d16 = cpu_ram_rom_data;
-    cpu_mem_in = word_shuffle(cpu_mem_addr, d16);
-
-    case ({cpu_io_addr[7:1], 1'b0})
-    8'h00: io16 = switches_p1_p2;
-    8'h02: io16 = flags;
-    8'h04: io16 = ~dip_sw[15:0];
-    8'h06: io16 = switches_p3_p4;
-    8'h08: io16 = { snd_latch_dout, snd_latch_dout };
-    default: io16 = 16'hffff;
-    endcase
-
-    cpu_io_in = cpu_io_addr[0] ? io16[15:8] : io16[7:0];
+    if (INTACK) begin
+        cpu_mem_in = { 8'd0, int_vector };
+    end else if (MRD) begin
+        if (buffer_memrq) cpu_mem_in = ga21_dout;
+        else if (eeprom_memrq) cpu_mem_in = { eeprom_dout, eeprom_dout };
+        else if (timer_memrq) cpu_mem_in = cpu_cycle_timer;
+        else cpu_mem_in = cpu_ram_rom_data;
+    end else if (IORD) begin
+        case ({cpu_word_addr[7:0]})
+        8'h00: cpu_mem_in = switches_p1_p2;
+        8'h02: cpu_mem_in = flags;
+        8'h04: cpu_mem_in = ~dip_sw[15:0];
+        8'h06: cpu_mem_in = switches_p3_p4;
+        8'h08: cpu_mem_in = { snd_latch_dout, snd_latch_dout };
+        default: cpu_mem_in = 16'hffff;
+        endcase
+    end else begin
+        cpu_mem_in = 16'hffff;
+    end
 end
 
-wire int_req, int_ack;
-wire [8:0] int_vector;
+wire int_req;
+wire [7:0] int_vector;
 
-v30 #(.INTACK_DELAY(0)) v30(
+V33 v33(
     .clk(clk_sys),
-    .ce(ce_cpu),
-    .ce_4x(ce_4x_cpu),
+    .ce_1(ce_1_cpu),
+    .ce_2(ce_2_cpu),
+
+    // Pins
     .reset(~reset_n),
-    .turbo(1),
-    .SLOWTIMING(0),
+    .hldrq(0),
+    .n_ready(0),
+    .bs16(0),
 
-    .cpu_idle(),
-    .cpu_halt(),
-    .cpu_irqrequest(),
-    .cpu_prefix(),
+    .hldak(),
+    .n_buslock(),
+    .n_ube(cpu_n_ube),
+    .r_w(cpu_r_w),
+    .m_io(cpu_m_io),
+    .busst0(cpu_busst0),
+    .busst1(cpu_busst1),
+    .aex(),
+    .n_bcyst(cpu_n_bcyst),
+    .n_dstb(cpu_n_dstb),
 
-    .bus_read(cpu_mem_read_w),
-    .bus_write(cpu_mem_write_w),
-    .bus_be(cpu_mem_sel),
-    .bus_addr(cpu_mem_addr),
-    .bus_datawrite(cpu_mem_out),
-    .bus_dataread(cpu_mem_in),
+    .intreq(int_req),
+    .n_nmi(1),
 
-    .irqrequest_in(int_req),
-    .irqvector_in(int_vector),
-    .irqrequest_ack(int_ack),
+    .n_cpbusy(1),
+    .n_cperr(1),
+    .cpreq(0),
 
-    // TODO
-    .cpu_done(),
+    .addr(cpu_mem_addr),
+    .dout(cpu_mem_out),
+    .din(cpu_mem_in),
 
-    .RegBus_Din(cpu_io_out),
-    .RegBus_Adr(cpu_io_addr),
-    .RegBus_wren(cpu_io_write),
-    .RegBus_rden(cpu_io_read),
-    .RegBus_Dout(cpu_io_in)
+    .turbo(cpu_turbo)
 );
 
 address_translator address_translator(
     .A(cpu_mem_addr),
     .board_cfg(board_cfg),
-    .ram_rom_memrq(ram_rom_memrq),
+    .ram_rom_memrq(cpu_ram_rom_memrq),
     .sdr_addr(cpu_region_addr),
     .writable(cpu_region_writable),
 
@@ -405,6 +423,7 @@ address_translator address_translator(
     .sprite_control_memrq(sprite_control_memrq),
     .video_control_memrq(video_control_memrq),
     .eeprom_memrq(eeprom_memrq),
+    .timer_memrq(timer_memrq),
 
     .bank_select(bank_select)
 );
@@ -413,19 +432,19 @@ wire vblank, hblank, vsync, hsync, vpulse, hpulse, hint;
 
 m92_pic m92_pic(
     .clk(clk_sys),
-    .ce(ce_cpu),
+    .ce(ce_1_cpu),
     .reset(~reset_n),
 
-    .cs((IORD | IOWR) & ~cpu_io_addr[7] & cpu_io_addr[6] & ~cpu_io_addr[0]), // 0x40-0x43
+    .cs((IORD | IOWR) & ~cpu_mem_addr[7] & cpu_mem_addr[6] & ~cpu_mem_addr[0]), // 0x40-0x43
     .wr(IOWR),
     .rd(0),
-    .a0(cpu_io_addr[1]),
-
-    .din(cpu_io_out),
+    .a0(cpu_mem_addr[1]),
+    
+    .din(cpu_mem_out[7:0]),
 
     .int_req(int_req),
     .int_vector(int_vector),
-    .int_ack(int_ack),
+    .int_ack(INTACK),
 
     .intp({4'd0, snd_latch_rdy, hint, ~dma_busy, vblank})
 );
@@ -516,7 +535,7 @@ GA21 ga21(
 
     .reset(),
 
-    .din(cpu_word_out),
+    .din(cpu_mem_out),
     .dout(ga21_dout),
 
     .addr(cpu_mem_addr[11:1]),
@@ -587,8 +606,8 @@ GA23 ga23(
     .paused(paused),
 
     .io_wr(IOWR),
-    .addr(IOWR ? {8'd0, cpu_io_addr} : cpu_mem_addr),
-    .cpu_din(IOWR ? {8'd0, cpu_io_out} : cpu_mem_out),
+    .addr(cpu_mem_addr),
+    .cpu_din(cpu_mem_out),
 
     .vram_addr(vram_addr),
     .vram_din(sdr_vram_data),
@@ -659,19 +678,17 @@ wire [15:0] sound_sample;
 
 sound sound(
     .clk_sys(clk_sys),
-    .reset(~reset_n),
+    .reset(sound_reset | ~reset_n),
     .filter_en(en_audio_filters),
     .dbg_fm_en(dbg_fm_en),
     .paused(paused),
 
-    .latch_wr(IOWR & cpu_io_addr == 8'h00),
-	//.latch_wr(snd_wr),
-    .latch_rd(IORD & cpu_io_addr == 8'h08),
-    .latch_din(cpu_io_out),
-	//.latch_din(snd_id),
+    .latch_wr(IOWR & cpu_word_addr[7:0] == 8'h00),
+    .latch_rd(IORD & cpu_word_addr[7:0] == 8'h08),
+    .latch_din(cpu_mem_out[7:0]),
     .latch_dout(snd_latch_dout),
     .latch_rdy(snd_latch_rdy),
-    
+
     .rom_addr(bram_addr),
     .rom_data(bram_data),
     .rom_wr(bram_wr & bram_cs[1]),
