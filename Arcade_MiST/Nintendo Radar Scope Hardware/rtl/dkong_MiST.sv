@@ -185,10 +185,11 @@ pll pll(
 wire pll2_locked;
 pll pll2(
 	.inclk0(CLOCK_27),
-	.c0(SDRAM2_CLK),
+	.c0(clock2_48),
 	.locked(pll2_locked)
 	);
 assign SDRAM2_CKE = 1;
+assign SDRAM2_CLK = clock2_48;
 `endif
 
 wire [31:0] status;
@@ -375,7 +376,11 @@ dkong_top dkong(
 	);
 
 mist_dual_video #(.COLOR_DEPTH(4),.SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD), .USE_BLANKS(1'b1)) mist_video(
+`ifdef DUAL_SDRAM
+	.clk_sys(clock2_48),
+`else
 	.clk_sys(clock_48),
+`endif
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
@@ -400,7 +405,7 @@ mist_dual_video #(.COLOR_DEPTH(4),.SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS)
 	.HDMI_DE        ( HDMI_DE          ),
 `endif
 `ifdef DUAL_SDRAM
-	.clk_sdram      ( clock_48         ),
+	.clk_sdram      ( clock2_48        ),
 	.sdram_init     ( ~pll2_locked     ),
 	.SDRAM_A        ( SDRAM2_A         ),
 	.SDRAM_DQ       ( SDRAM2_DQ        ),

@@ -97,7 +97,7 @@ set_output_delay -add_delay  -clock [get_clocks {SPI_SCK}]  1.000 [get_ports {SP
 set_output_delay -add_delay  -clock [get_clocks $sys_clk]   1.000 [get_ports {AUDIO_L}]
 set_output_delay -add_delay  -clock [get_clocks $sys_clk]   1.000 [get_ports {AUDIO_R}]
 set_output_delay -add_delay  -clock [get_clocks $sdram_clk] 1.000 [get_ports {LED}]
-set_output_delay -add_delay  -clock [get_clocks $sys_clk]   1.000 [get_ports {VGA_*}]
+set_output_delay -add_delay  -clock [get_clocks $sdram2_clk] 1.000 [get_ports {VGA_*}]
 
 set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -max 1.5 [get_ports {SDRAM_D* SDRAM_A* SDRAM_BA* SDRAM_n* SDRAM_CKE}]
 set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM_CLK}] -min -0.8 [get_ports {SDRAM_D* SDRAM_A* SDRAM_BA* SDRAM_n* SDRAM_CKE}]
@@ -110,6 +110,7 @@ set_output_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRA
 #**************************************************************
 
 set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[*]}]
+set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll2|altpll_component|auto_generated|pll1|clk[*]}]
 
 #**************************************************************
 # Set False Path
