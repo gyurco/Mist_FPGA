@@ -152,6 +152,7 @@ localparam CONF_STR = {
 	"OY,Rotation filter,Off,On;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
+	"O6,Joystick swap,Off,On;",
 	"O7,Pause,Off,On;",
 	`SEP
 	"DIP;",
@@ -163,6 +164,7 @@ localparam CONF_STR = {
 wire       rotate = status[2];
 wire [1:0] scanlines = status[4:3];
 wire       blend = status[5];
+wire       joyswap = status[6];
 wire [7:0] dsw1 = status[15:8];
 wire [7:0] dsw2 = status[23:16];
 wire       pause = status[7];
@@ -454,7 +456,7 @@ arcade_inputs inputs (
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
 	.orientation ( {1'b1, ~|rotate_screen}),
-	.joyswap     ( 1'b0        ),
+	.joyswap     ( joyswap     ),
 	.oneplayer   ( 1'b0        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),
 	.player1     ( {m_fireF, m_fireE, m_fireD, m_fireC, m_fireB, m_fireA, m_up, m_down, m_left, m_right} ),
