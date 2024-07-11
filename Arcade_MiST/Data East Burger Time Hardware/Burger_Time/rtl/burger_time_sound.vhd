@@ -40,9 +40,12 @@ port
 	sound_timing  : in std_logic;
 
 	audio_out     : out std_logic_vector(10 downto 0);
-	snd_rom_addr	: out std_logic_vector(11 downto 0);
-	snd_rom_do     : in std_logic_vector(7 downto 0);
-	dbg_cpu_addr: out std_logic_vector(15 downto 0)
+	dbg_cpu_addr: out std_logic_vector(15 downto 0);
+
+	dl_clk        : in std_logic;
+	dl_addr       : in std_logic_vector(16 downto 0);
+	dl_data       : in std_logic_vector(7 downto 0);
+	dl_wr         : in std_logic
   );
 end burger_time_sound;
 
@@ -69,6 +72,7 @@ architecture syn of burger_time_sound is
   -- program rom signals
   signal prog_rom_cs     : std_logic;
   signal prog_rom_do     : std_logic_vector(7 downto 0); 
+  signal prog_rom_we     : std_logic;
 
   -- working ram signals
   signal wram_cs         : std_logic;
@@ -359,8 +363,19 @@ port map(
 -- data => prog_rom_do
 --);
 
-snd_rom_addr <= cpu_addr(11 downto 0);
-prog_rom_do <= snd_rom_do;	
+prog_rom_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "01000" else '0';
+
+program_rom: entity work.dpram
+generic map( dWidth => 8, aWidth => 12)
+port map(
+ clk_a  => clock_12n,
+ addr_a => cpu_addr(11 downto 0),
+ q_a    => prog_rom_do,
+ clk_b  => dl_clk,
+ addr_b => dl_addr(11 downto 0),
+ we_b   => prog_rom_we,
+ d_b    => dl_data
+);
 
 -- AY-3-8910 #1
 ay_3_8910_1 : entity work.YM2149

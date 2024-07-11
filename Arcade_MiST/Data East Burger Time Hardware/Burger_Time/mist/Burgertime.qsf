@@ -43,7 +43,7 @@ set_global_assignment -name ORIGINAL_QUARTUS_VERSION 15.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "17:45:13 JUNE 17,2016"
 set_global_assignment -name LAST_QUARTUS_VERSION 13.1
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
-set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:rtl/build_id.tcl"
+set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:build_id.tcl"
 
 # Pin & Location Assignments
 # ==========================
@@ -177,24 +177,24 @@ set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -
 
 		# Incremental Compilation Assignments
 		# ===================================
-		set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-		set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-		set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 
 	# end DESIGN_PARTITION(Top)
 	# -------------------------
 
 # end ENTITY(Burgertime)
 # ---------------------------
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/Burgertime_MiST.sv
-set_global_assignment -name VHDL_FILE rtl/burger_time.vhd
-set_global_assignment -name VHDL_FILE rtl/burger_time_sound.vhd
-set_global_assignment -name VHDL_FILE rtl/gen_ram.vhd
-set_global_assignment -name VHDL_FILE rtl/dpram.vhd
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/sdram.sv
-set_global_assignment -name VERILOG_FILE rtl/pll.v
-set_global_assignment -name VHDL_FILE ../../../common/Sound/ym2149/YM2149.vhd
-set_global_assignment -name VHDL_FILE ../../../common/Sound/ym2149/vol_table_array.vhd
-set_global_assignment -name QIP_FILE ../../../common/CPU/T65/T65.qip
-set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/Burgertime_MiST.sv
+set_global_assignment -name VHDL_FILE ../rtl/burger_time.vhd
+set_global_assignment -name VHDL_FILE ../rtl/burger_time_sound.vhd
+set_global_assignment -name VHDL_FILE ../rtl/gen_ram.vhd
+set_global_assignment -name VHDL_FILE ../rtl/dpram.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv
+set_global_assignment -name VERILOG_FILE ../rtl/pll.v
+set_global_assignment -name VHDL_FILE ../../../../common/Sound/ym2149/YM2149.vhd
+set_global_assignment -name VHDL_FILE ../../../../common/Sound/ym2149/vol_table_array.vhd
+set_global_assignment -name QIP_FILE ../../../../common/CPU/T65/T65.qip
+set_global_assignment -name QIP_FILE ../../../../common/mist/mist.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
