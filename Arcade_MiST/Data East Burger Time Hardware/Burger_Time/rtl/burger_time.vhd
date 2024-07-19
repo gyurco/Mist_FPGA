@@ -77,6 +77,7 @@ architecture syn of burger_time is
   signal cpu_di_dec     : std_logic_vector( 7 downto 0);
   signal cpu_do         : std_logic_vector( 7 downto 0);
   signal cpu_rw_n       : std_logic;
+  signal cpu_irq_n      : std_logic;
   signal cpu_nmi_n      : std_logic;
   signal cpu_sync       : std_logic;
   signal cpu_ena        : std_logic;
@@ -279,6 +280,7 @@ btn_system <= SYS;
 process (reset,clock_12)
 begin
 	if reset = '1' then
+		cpu_irq_n <= '1';
 		cpu_nmi_n <= '1';
 		had_written <='0';
 		cocktail_flip <= '0';
@@ -286,10 +288,15 @@ begin
 	elsif rising_edge(clock_12)then
 			coin_r <= btn_system(6) or btn_system(7);
 			if coin_r = '0' and (btn_system(6) = '1' or btn_system(7) = '1') then
-				cpu_nmi_n <= '0';
+				if hwsel /= HW_ZOAR then
+					cpu_nmi_n <= '0';
+				else
+					cpu_irq_n <= '0';
+				end if;
 			end if;
 			if raz_nmi_we = '1' then
 				cpu_nmi_n <= '1';
+				cpu_irq_n <= '1';
 			end if;
 			if cpu_ena = '1' then
 				if cpu_rw_n = '0' then
@@ -372,6 +379,7 @@ begin
 				elsif (cpu_addr(2 downto 0) = "010") then cpu_di <= btn_p1;
 				elsif (cpu_addr(2 downto 0) = "011") then cpu_di <= btn_p2;
 				elsif (cpu_addr(2 downto 0) = "100") then cpu_di <= btn_system; end if;
+				if cpu_addr(2 downto 0) = "001" then raz_nmi_we <= '1';  end if; -- guesswork
 			end if;
 
 			-- write enable
@@ -731,7 +739,7 @@ port map
     Clk         => clock_12,
     Rdy         => '1',
     Abort_n     => '1',
-    IRQ_n       => '1',--cpu_irq_n,
+    IRQ_n       => cpu_irq_n,
     NMI_n       => cpu_nmi_n,
     SO_n        => '1',--cpu_so_n,
     R_W_n       => cpu_rw_n,
