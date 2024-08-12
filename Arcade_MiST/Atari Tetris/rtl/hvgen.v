@@ -27,6 +27,7 @@ always @(posedge MCLK) begin
 			337: begin HBLK <= 1; hcnt <= hcnt+1'd1; end
 			352: begin HSYN <= 0; hcnt <= hcnt+1'd1; end
 			400: begin HSYN <= 1;  hcnt <= hcnt+1'd1; end
+			416: begin hcnt <= 481;    end
 			511: begin hcnt <= 0;
 				case (vcnt)
 					239: begin VBLK <= 1; vcnt <= vcnt+1'd1; end
