@@ -80,8 +80,8 @@ pll_mist pll(
 wire [31:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
-wire  [7:0] joystick_0;
-wire  [7:0] joystick_1;
+wire  [31:0] joystick_0;
+wire  [31:0] joystick_1;
 wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
@@ -313,7 +313,7 @@ wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE,
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F, m_fire2G, m_fire2H;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 
-arcade_inputs inputs (
+arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 	.clk         ( clk_sys     ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
