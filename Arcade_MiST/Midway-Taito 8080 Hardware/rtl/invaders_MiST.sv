@@ -208,8 +208,8 @@ wire  [6:0] core_mod;
 wire [63:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
-wire  [7:0] joystick_0;
-wire  [7:0] joystick_1;
+wire  [31:0] joystick_0;
+wire  [31:0] joystick_1;
 wire [31:0] joystick_analog_0;
 wire [31:0] joystick_analog_1;
 wire        scandoublerD;
@@ -1771,7 +1771,7 @@ wire m_up3, m_down3, m_left3, m_right3, m_fire3a, m_fire3b, m_fire3c, m_fire3d, 
 wire m_up4, m_down4, m_left4, m_right4, m_fire4a, m_fire4b, m_fire4c, m_fire4d, m_fire4e, m_fire4f;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_start1, m_start2, m_start3, m_start4;
 
-arcade_inputs inputs (
+arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 	.clk         ( clk_sys     ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
