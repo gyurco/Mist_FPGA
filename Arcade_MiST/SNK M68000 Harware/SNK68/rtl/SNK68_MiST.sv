@@ -521,7 +521,7 @@ wire m_up2, m_down2, m_left2, m_right2, m_up2B, m_down2B, m_left2B, m_right2B;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 wire [11:0] m_fire1, m_fire2;
 
-arcade_inputs inputs (
+arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 	.clk         ( clk_72      ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
