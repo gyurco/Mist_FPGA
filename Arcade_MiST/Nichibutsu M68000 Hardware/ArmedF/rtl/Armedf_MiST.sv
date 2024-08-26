@@ -514,7 +514,7 @@ wire m_up3, m_down3, m_left3, m_right3, m_fire3A, m_fire3B, m_fire3C, m_fire3D, 
 wire m_up4, m_down4, m_left4, m_right4, m_fire4A, m_fire4B, m_fire4C, m_fire4D, m_fire4E, m_fire4F, m_up4B, m_down4B, m_left4B, m_right4B;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 
-arcade_inputs inputs (
+arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 	.clk         ( clk_24      ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
