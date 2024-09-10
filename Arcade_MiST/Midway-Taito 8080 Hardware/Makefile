@@ -1,3 +1,3 @@
-PROJECT=spaceinvaders
+PROJECT=SpaceInvaders
 
 include ../Makefile.common
