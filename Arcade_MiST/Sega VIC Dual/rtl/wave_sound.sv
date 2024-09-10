@@ -45,15 +45,14 @@
 
 module wave_sound 
 #(
-	`ifdef SIMULATION
-	parameter [11:0] AUDIO_CLOCK_DIVIDE = 12'd350 // 44,100 / 15468480 Mhz - uses main system clock as simulated SDRAM has no wait
-	`else
-	parameter [11:0] AUDIO_CLOCK_DIVIDE = 12'd2104 // 44,100 / 92810880 Mhz - uses SDRAM clock
-	`endif
+//	`ifdef SIMULATION
+	parameter [11:0] AUDIO_CLOCK_DIVIDE = 12'd350 // 44,100 / 15.468480 Mhz - uses main system clock as simulated SDRAM has no wait
+//	`else
+//	parameter [11:0] AUDIO_CLOCK_DIVIDE = 12'd1400 // 44,100 / 61.873920 Mhz - uses SDRAM clock
+//	`endif
 )
 (
 	input				clk,
-	input				ce_sys,
 	input				reset,
 	input				pause,
 
@@ -100,20 +99,22 @@ localparam [1:0] SFX_STATE_HEADER = 2'd1;
 localparam [1:0] SFX_STATE_PLAYING = 2'd2;
 localparam [1:0] SFX_STATE_WAITING = 2'd3;
 
-reg [(SFX_MAX_SAMPLES*2)-1:0] sfx_state = 0;
+reg  [1:0] sfx_state[SFX_MAX_SAMPLES];
 reg [(SFX_MAX_SAMPLES*2)-1:0] sfx_timer = 0; // Timer for wait state (to slow down 11Khz samples)
 reg [(SFX_MAX_SAMPLES)-1:0] sfx_trigger_last = 0;
 reg [(SFX_MAX_SAMPLES)-1:0] sfx_start_pending = 0;
 reg [(SFX_MAX_SAMPLES)-1:0] sfx_stop_pending = 0;
 reg [(SFX_MAX_SAMPLES)-1:0] sfx_bits = 0; // 0=8 bit sample, 1=16 bit sample
 reg [(SFX_MAX_SAMPLES*2)-1:0] sfx_rate = 0; // 0=44,100hz, 1=22,050hz, 2=11,000hz
-reg [(SFX_MAX_SAMPLES*32)-1:0] sfx_address = 0;
-reg [(SFX_MAX_SAMPLES*32)-1:0] sfx_address_end = 0;
+//reg [(SFX_MAX_SAMPLES*32)-1:0] sfx_address = 0;
+//reg [(SFX_MAX_SAMPLES*32)-1:0] sfx_address_end = 0;
+reg [31:0] sfx_address[SFX_MAX_SAMPLES];
+reg [31:0] sfx_address_end[SFX_MAX_SAMPLES];
 
-wire [4:0] sfx_state_lookup = { sfx_active_index, 1'b0 };
-wire [8:0] sfx_address_lookup = { sfx_active_index, 5'b00000 };
-wire [31:0] sfx_address_current = sfx_address[sfx_address_lookup+:32];
+//wire [8:0] sfx_address_lookup = { sfx_active_index, 5'b00000 };
+wire [31:0] sfx_address_current = sfx_address[sfx_active_index];
 wire [7:0] sfx_check_trigger = sfx_data_trigger[sfx_trigger_check_lookup+:8];
+wire [4:0] sfx_state_lookup = { sfx_active_index, 1'b0 };
 
 reg sfx_next_ready = 1'b0;
 reg sfx_data_hold = 1'b0;
@@ -143,15 +144,17 @@ reg [23:0] debug_cycle = 0;
 reg read_done = 1'b0;
 reg wave_read = 1'b0;
 reg wave_data_ready = 1'b0;
+reg wave_msb = 1'b0;
 
 always@(posedge clk)
 begin
-	reg old_wave_load, old_data_load, old_wav_rd, old_ack;
+	reg old_wave_load, old_data_load, old_wav_rd, old_ack, wr_old;
 
 	old_wave_load <= sfx_wave_load;
 	old_data_load <= sfx_data_load;
 	old_wav_rd <= wave_read;
 	old_ack <= sdram_ack;
+	wr_old <= dn_wr;
 	
 	// Wave data load has finished
 	if(old_wave_load & ~sfx_wave_load) sfx_wave_loaded <= 1;
@@ -160,7 +163,7 @@ begin
 	if(sfx_data_load) 
 	begin
 		sfx_active_index <= dn_addr[6:3];
-		if(dn_wr)
+		if(wr_old & ~dn_wr)
 		begin
 			case(dn_addr[2:0])
 				3'd0: sfx_data_offset[(sfx_offset_lookup+24)+:8] <= dn_data;
@@ -172,7 +175,7 @@ begin
 					sfx_data_trigger_mode[sfx_active_index] <= dn_data[0];
 					sfx_data_loop_mode[sfx_active_index] <= dn_data[1];
 				end
-				3'd6: sfx_data_valid[sfx_active_index] <= 1'b1;
+				3'd6: sfx_data_valid[sfx_active_index] <= dn_data[0];
 				default: $display("sfx_data_load unhandled case");
 			endcase
 		end
@@ -236,14 +239,14 @@ begin
 		if(audio_cycle_due && sfx_data_valid[sfx_active_index])
 		begin
 
-			case(sfx_state[sfx_state_lookup+:2])
+			case(sfx_state[sfx_active_index])
 			SFX_STATE_STOPPED:
 			begin
 				if(sfx_start_pending[sfx_active_index])
 				begin
 					// Trigger has gone high - start (or restart) the sample
-					sfx_state[sfx_state_lookup+:2] <= SFX_STATE_HEADER;
-					sfx_address[sfx_address_lookup+:32] <= 32'b0;
+					sfx_state[sfx_active_index] <= SFX_STATE_HEADER;
+					sfx_address[sfx_active_index] <= 32'b0;
 					sfx_start_pending[sfx_active_index] <= 1'b0;
 					wave_read <= 1'b1;
 					read_done <= 1'b0;
@@ -258,6 +261,7 @@ begin
 			SFX_STATE_HEADER:
 			begin
 				//$display("SFX %d header read at %d", sfx_active_index, sfx_address_current);
+				wave_msb <= 0;
 				if (wave_data_ready)
 				begin
 					wave_read <= 1'b0;
@@ -265,7 +269,7 @@ begin
 						wave_read <= 1;
 						wave_data_ready <= 1'b0;
 						//$display("HEADER READ: %d %x", sfx_address_current[5:0], sdram_dout);
-						case (sfx_address[sfx_address_lookup+:6])
+						case (sfx_address[sfx_active_index][5:0])
 							22: num_channels[7:0]		<= sdram_dout;
 							23: num_channels[15:8]		<= sdram_dout;
 							24: sample_rate[7:0]		<= sdram_dout;
@@ -287,11 +291,11 @@ begin
 								sfx_rate[sfx_state_lookup+:2] <= 2'd0; // Default to 44,100Hz
 								if(sample_rate == 32'd22050) sfx_rate[sfx_state_lookup+:2] <= 2'd1;
 								if(sample_rate == 32'd11025) sfx_rate[sfx_state_lookup+:2] <= 2'd2;
-								sfx_address_end[sfx_address_lookup+:32] <= sfx_address_current + data_size;
-								sfx_state[sfx_state_lookup+:2] <= SFX_STATE_PLAYING;
+								sfx_address_end[sfx_active_index] <= sfx_address_current + data_size;
+								sfx_state[sfx_active_index] <= SFX_STATE_PLAYING;
 								end
 						endcase
-						if(!(sfx_address_current == 32'd0 && sdram_dout == 8'b0) && sfx_address[sfx_address_lookup+:6] != 6'd44) sfx_address[sfx_address_lookup+:32] <= sfx_address_current + 1'd1;
+						if(!(sfx_address_current == 32'd0 && sdram_dout == 8'b0) && sfx_address[sfx_active_index][5:0] != 6'd44) sfx_address[sfx_active_index] <= sfx_address_current + 1'd1;
 					end
 				end
 			end
@@ -310,16 +314,17 @@ begin
 							read_done	<= 1;
 						end
 						// Otherwise get the low byte for the sample then read again
-						else if (!sfx_address_current[0]) begin
+						else if (!wave_msb) begin
 							W_SAMPL_LSB	<= sdram_dout;
 							wave_read	<= 1;
+							wave_msb <= 1;
 						end
 						// Finally get the high byte for the sample we are done
 						else begin
 							W_SAMPL		<= {sdram_dout, W_SAMPL_LSB};
 							read_done	<= 1;
 						end
-						sfx_address[sfx_address_lookup+:32] <= sfx_address_current + 1'd1;
+						sfx_address[sfx_active_index] <= sfx_address_current + 1'd1;
 					end
 				end
 
@@ -327,7 +332,7 @@ begin
 				if(read_done) begin
 
 					read_done <= 0;
-					wave_read <= 1;
+					wave_msb <= 0;
 					
 					last_sample_ram_addr <= sfx_active_index;
 					last_sample_ram_write <= 1'b1;
@@ -336,18 +341,18 @@ begin
 					//$display("%d / %d) SFX %d sfx_last_sample: %d %d %d", debug_cycle, audio_cycle, sfx_active_index, `sample_value, $signed(sfx_last_sample[sfx_last_sample_lookup+:ACC_WIDTH]), `sample_last);
 					// $display("%d / %d) SFX %d @ %d sample %d %d", debug_cycle, audio_cycle, sfx_active_index, sfx_address_current, `sample_last, W_SAMPL);
 					// $display("%d / %d) SFX %d ACC = %d", debug_cycle, audio_cycle, sfx_active_index, sample_accumulator);
-					if(sfx_address_current == sfx_address_end[sfx_address_lookup+:32])
+					if(sfx_address_current == sfx_address_end[sfx_active_index])
 					begin
 						// If this is a one-shot sample, stop, otherwise loop
 						if(sfx_data_loop_mode[sfx_active_index] == 1'b0)
 						begin
 							$display("%d / %d) SFX %d finished at %d", debug_cycle, audio_cycle, sfx_active_index, sfx_address_current);
-							sfx_state[sfx_state_lookup+:2] <= SFX_STATE_STOPPED;
+							sfx_state[sfx_active_index] <= SFX_STATE_STOPPED;
 						end
 						else
 						begin
 							$display("%d / %d) SFX %d looping at %d", debug_cycle, audio_cycle, sfx_active_index, sfx_address_current);
-							sfx_address[sfx_address_lookup+:32] <= 32'd44;
+							sfx_address[sfx_active_index] <= 32'd44;
 						end
 					end
 					else
@@ -355,24 +360,29 @@ begin
 						if(sfx_rate[sfx_state_lookup+:2] > 2'd0)
 						begin
 							// 22Khz sample mode so need to skip until next audio cycle
-							sfx_state[sfx_state_lookup+:2] <= SFX_STATE_WAITING;
+							sfx_state[sfx_active_index] <= SFX_STATE_WAITING;
 							sfx_timer[sfx_state_lookup+:2] <= sfx_rate[sfx_state_lookup+:2] == 2'd1 ? 2'd0 : 2'd2;
 						end
 					end
 					sfx_next_ready = 1'b1;
 				end
 
+				if (!wave_read & !read_done & !wave_data_ready) begin
+					wave_read <= 1;
+					wave_data_ready <= 1'b0;
+				end
+
 				if(sfx_data_trigger_mode[sfx_active_index] == 1'b0 && sfx_start_pending[sfx_active_index])
 				begin
 					$display("%d / %d) SFX %d halted for restart at %d", debug_cycle, audio_cycle, sfx_active_index, sfx_address_current);
-					sfx_state[sfx_state_lookup+:2] <= SFX_STATE_STOPPED;
+					sfx_state[sfx_active_index] <= SFX_STATE_STOPPED;
 				end
 
-				if(sfx_data_trigger_mode[sfx_active_index] == 1'b1 && sfx_stop_pending[sfx_active_index] && sfx_state[sfx_state_lookup+:2] == SFX_STATE_PLAYING)
+				if(sfx_data_trigger_mode[sfx_active_index] == 1'b1 && sfx_stop_pending[sfx_active_index] && sfx_state[sfx_active_index] == SFX_STATE_PLAYING)
 				begin
 					$display("%d / %d) SFX %d stopped at %d", debug_cycle, audio_cycle, sfx_active_index, sfx_address_current);
 					sfx_stop_pending[sfx_active_index] <= 1'b0;
-					sfx_state[sfx_state_lookup+:2] <= SFX_STATE_STOPPED;
+					sfx_state[sfx_active_index] <= SFX_STATE_STOPPED;
 				end
 			end
 			SFX_STATE_WAITING:
@@ -385,7 +395,7 @@ begin
 					// $display("%d / %d) SFX %d ACC = %d", debug_cycle, audio_cycle, sfx_active_index, sample_accumulator);
 					if(sfx_timer[sfx_state_lookup+:2] == 2'd0)
 					begin
-						sfx_state[sfx_state_lookup+:2] <= SFX_STATE_PLAYING;
+						sfx_state[sfx_active_index] <= SFX_STATE_PLAYING;
 						read_done <= 0;
 						wave_read <= 1;
 					end

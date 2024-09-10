@@ -59,7 +59,7 @@ module sound_carnival (
 		end
 	end
 
-	wire rom_t48_we = dn_index == 8'd0 && dn_addr >= 24'h8060 && dn_wr;
+	wire rom_t48_we = dn_index == 8'd0 && dn_addr >= 24'h8060 && dn_addr < 24'h8460 && dn_wr;
 	wire [9:0] rom_t48_write_addr = dn_addr[9:0] - 10'h60;
 	dpram #(10,8) rom_t48
 	(

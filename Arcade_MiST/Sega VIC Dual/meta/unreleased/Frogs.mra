@@ -6,7 +6,7 @@
 	<rbf>SegaVICZ80</rbf>
 	<num_buttons>1</num_buttons>
 	<buttons default="B,Start,Select" names="Fire,-,-,-,-,-,Start,Coin,P2 Start,-"></buttons>
-	<switches default="0F">
+	<switches default="0F" base="16" page_id="1" page_name="Switches">
 		<dip bits="0" ids="Off,On" name="Demo sounds" values="1,0"></dip>
 		<dip bits="1" ids="No,Yes" name="Free game" values="0,1"></dip>
 		<dip bits="2" ids="60,90" name="Game time" values="0,1"></dip>

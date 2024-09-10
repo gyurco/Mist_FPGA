@@ -25,6 +25,7 @@ module vic (
 	input clk,
 	input reset,
 
+	input ce_pix,	// 29
 	input srl,	// 29
 	input src,	// 23
 	input msb,	// 30
@@ -57,7 +58,7 @@ module vic (
 	localparam VIC_HSEND = 9'd304;
 
 	localparam VIC_VTOTAL = 9'd262;
-	localparam VIC_VBSTART = 9'd224;
+	localparam VIC_VBSTART = 9'd223;
 	localparam VIC_VBEND = 9'd000;
 	localparam VIC_VSSTART = 9'd236;
 	localparam VIC_VSEND = 9'd240;
@@ -79,8 +80,6 @@ module vic (
 	wire s_128h = hcnt[7];
 
 	reg hsync_last;
-	reg src_last;
-	wire src_falling = !src && src_last;
 
 	always @(posedge clk)
 	begin
@@ -91,8 +90,7 @@ module vic (
 		end
 		else
 		begin
-			src_last <= src;
-			if(src_falling)
+			if(ce_pix) // falling edge of src
 			begin
 				hcnt <= hcnt + 1'b1;
 				if(hcnt == VIC_HBSTART) hblank <= 1'b1;

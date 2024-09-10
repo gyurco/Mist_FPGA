@@ -12,7 +12,7 @@
 	<flip>no</flip>
 	<num_buttons>1</num_buttons>
 	<buttons default="B,Start,Select" names="Fire,-,-,-,-,-,Start,Coin,P2 Start,-"></buttons>
-	<switches default="00">
+	<switches default="00" base="16" page_id="1" page_name="Switches">
 		<dip bits="0" ids="Off,On" name="Demo sounds" values="1,0">
 		</dip>
 	</switches>
@@ -46,8 +46,28 @@
 		<part crc="e60a7960" name="316-0043.u65" />
 		<!-- MUSIC PROM -->
 		<part crc="0dbaa2b0" name="epr-412.u5" />
-	</rom>
-	<rom index="2" md5="none" zip="/sound/carnival.zip">
+
+		<part repeat="0x20">00</part>
+		<part>
+			00 00 00 00 0A 00 01 00 
+			00 00 4E 9A 06 00 01 00 
+			00 05 79 5E 07 00 01 00 
+			00 06 0C 9A 01 00 01 00 
+			00 07 09 F2 02 03 01 00 
+			00 07 61 B6 03 03 01 00 
+			00 07 A3 46 04 03 01 00 
+			00 08 49 08 05 00 01 00 
+			00 08 C9 8A 0D 00 01 00 
+			00 09 39 38 00 00 01 00 
+			00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00
+		</part>
+
+
 		<part>
 			52 49 46 46 92 4E 00 00 57 41 56 45 66 6D 74 20 
 			10 00 00 00 01 00 01 00 22 56 00 00 44 AC 00 00 
@@ -40788,20 +40808,6 @@
 			00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 
 			00 00 00 00 00 00 
 	</part>
-	</rom>
-	<rom index="3" md5="none">
-		<part>
-			00 00 00 00 0A 00 00 00 
-			00 00 4E 9A 06 00 00 00 
-			00 05 79 5E 07 00 00 00 
-			00 06 0C 9A 01 00 00 00 
-			00 07 09 F2 02 03 00 00 
-			00 07 61 B6 03 03 00 00 
-			00 07 A3 46 04 03 00 00 
-			00 08 49 08 05 00 00 00 
-			00 08 C9 8A 0D 00 00 00 
-			00 09 39 38 00 00 00 00 
-		</part>
 	</rom>
 	<nvram index="4" size="69">
 	</nvram>

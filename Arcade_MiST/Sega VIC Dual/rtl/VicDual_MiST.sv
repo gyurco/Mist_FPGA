@@ -1,19 +1,46 @@
 module VicDual_MiST(
-	output        LED,						
-	output  [5:0] VGA_R,
-	output  [5:0] VGA_G,
-	output  [5:0] VGA_B,
+	input         CLOCK_27,
+`ifdef USE_CLOCK_50
+	input         CLOCK_50,
+`endif
+
+	output        LED,
+	output [VGA_BITS-1:0] VGA_R,
+	output [VGA_BITS-1:0] VGA_G,
+	output [VGA_BITS-1:0] VGA_B,
 	output        VGA_HS,
 	output        VGA_VS,
-	output        AUDIO_L,
-	output        AUDIO_R,	
+
+`ifdef USE_HDMI
+	output        HDMI_RST,
+	output  [7:0] HDMI_R,
+	output  [7:0] HDMI_G,
+	output  [7:0] HDMI_B,
+	output        HDMI_HS,
+	output        HDMI_VS,
+	output        HDMI_PCLK,
+	output        HDMI_DE,
+	input         HDMI_INT,
+	inout         HDMI_SDA,
+	inout         HDMI_SCL,
+`endif
+
 	input         SPI_SCK,
-	output        SPI_DO,
+	inout         SPI_DO,
 	input         SPI_DI,
-	input         SPI_SS2,
-	input         SPI_SS3,
-	input         CONF_DATA0,
-	input         CLOCK_27,
+	input         SPI_SS2,    // data_io
+	input         SPI_SS3,    // OSD
+	input         CONF_DATA0, // SPI_SS for user_io
+
+`ifdef USE_QSPI
+	input         QSCK,
+	input         QCSn,
+	inout   [3:0] QDAT,
+`endif
+`ifndef NO_DIRECT_UPLOAD
+	input         SPI_SS4,
+`endif
+
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
 	output        SDRAM_DQML,
@@ -24,24 +51,120 @@ module VicDual_MiST(
 	output        SDRAM_nCS,
 	output  [1:0] SDRAM_BA,
 	output        SDRAM_CLK,
-	output        SDRAM_CKE
+	output        SDRAM_CKE,
+
+`ifdef DUAL_SDRAM
+	output [12:0] SDRAM2_A,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_DQML,
+	output        SDRAM2_DQMH,
+	output        SDRAM2_nWE,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nCS,
+	output  [1:0] SDRAM2_BA,
+	output        SDRAM2_CLK,
+	output        SDRAM2_CKE,
+`endif
+
+	output        AUDIO_L,
+	output        AUDIO_R,
+`ifdef I2S_AUDIO
+	output        I2S_BCK,
+	output        I2S_LRCK,
+	output        I2S_DATA,
+`endif
+`ifdef I2S_AUDIO_HDMI
+	output        HDMI_MCLK,
+	output        HDMI_BCK,
+	output        HDMI_LRCK,
+	output        HDMI_SDATA,
+`endif
+`ifdef SPDIF_AUDIO
+	output        SPDIF,
+`endif
+`ifdef USE_AUDIO_IN
+	input         AUDIO_IN,
+`endif
+	input         UART_RX,
+	output        UART_TX
 
 );
 
-`include "rtl\build_id.v" 
+`ifdef NO_DIRECT_UPLOAD
+localparam bit DIRECT_UPLOAD = 0;
+wire SPI_SS4 = 1;
+`else
+localparam bit DIRECT_UPLOAD = 1;
+`endif
+
+`ifdef USE_QSPI
+localparam bit QSPI = 1;
+assign QDAT = 4'hZ;
+`else
+localparam bit QSPI = 0;
+`endif
+
+`ifdef VGA_8BIT
+localparam VGA_BITS = 8;
+`else
+localparam VGA_BITS = 6;
+`endif
+
+`ifdef USE_HDMI
+localparam bit HDMI = 1;
+assign HDMI_RST = 1'b1;
+`else
+localparam bit HDMI = 0;
+`endif
+
+`ifdef BIG_OSD
+localparam bit BIG_OSD = 1;
+`define SEP "-;",
+`else
+localparam bit BIG_OSD = 0;
+`define SEP
+`endif
+
+// remove this if the 2nd chip is actually used
+
+`ifdef DUAL_SDRAM
+assign SDRAM2_A = 13'hZZZZ;
+assign SDRAM2_BA = 0;
+assign SDRAM2_DQML = 1;
+assign SDRAM2_DQMH = 1;
+assign SDRAM2_CKE = 0;
+assign SDRAM2_CLK = 0;
+assign SDRAM2_nCS = 1;
+assign SDRAM2_DQ = 16'hZZZZ;
+assign SDRAM2_nCAS = 1;
+assign SDRAM2_nRAS = 1;
+assign SDRAM2_nWE = 1;
+`endif
+
+`include "build_id.v"
 
 localparam CONF_STR = {
-	"Carnival;ROM;",
+	"CARNIVAL;;",
 	"O2,Rotate Controls,Off,On;",
+	"OWX,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"OY,Rotation filter,Off,On;",
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blend,Off,On;",
+	"O6,Joystick Swap,Off,On;",
+	`SEP
+	"DIP;",
+	`SEP
 	"T0,Reset;",
 	"V,v0.00.",`BUILD_DATE
 };
 
-wire       rotate = status[2];
-wire [1:0] scanlines = status[4:3];
-wire       blend = status[5];
+wire        rotate = status[2];
+wire  [1:0] scanlines = status[4:3];
+wire        blend = status[5];
+wire        joyswap = status[6];
+wire  [1:0] rotate_screen = status[33:32];
+wire        rotate_filter = status[34];
 
 assign LED = ~ioctl_downl;
 assign AUDIO_R = AUDIO_L;
@@ -49,12 +172,16 @@ assign AUDIO_R = AUDIO_L;
 wire clk_mem, clk_vid, clk_sys, pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
-	.c0(clk_mem),//92.810880
+	.c0(clk_mem),//61.87392
 	.c1(clk_vid),//30.936960
 	.c2(clk_sys),//15.468480
 	.locked(pll_locked)
 	);
 
+assign SDRAM_CLK = clk_mem;
+assign SDRAM_CKE = 1;
+
+wire  [7:0] core_mod;
 wire [63:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
@@ -66,8 +193,21 @@ wire        no_csync;
 wire        key_strobe;
 wire        key_pressed;
 wire  [7:0] key_code;
+`ifdef USE_HDMI
+wire        i2c_start;
+wire        i2c_read;
+wire  [6:0] i2c_addr;
+wire  [7:0] i2c_subaddr;
+wire  [7:0] i2c_dout;
+wire  [7:0] i2c_din;
+wire        i2c_ack;
+wire        i2c_end;
+`endif
 
-user_io #(.STRLEN(($size(CONF_STR)>>3)))user_io(
+user_io #(
+	.STRLEN(($size(CONF_STR)>>3)),
+	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
+user_io (
 	.clk_sys        (clk_sys        ),
 	.conf_str       (CONF_STR       ),
 	.SPI_CLK        (SPI_SCK        ),
@@ -79,6 +219,17 @@ user_io #(.STRLEN(($size(CONF_STR)>>3)))user_io(
 	.scandoubler_disable (scandoublerD	  ),
 	.ypbpr          (ypbpr          ),
 	.no_csync       (no_csync       ),
+	.core_mod       (core_mod       ),
+`ifdef USE_HDMI
+	.i2c_start      (i2c_start      ),
+	.i2c_read       (i2c_read       ),
+	.i2c_addr       (i2c_addr       ),
+	.i2c_subaddr    (i2c_subaddr    ),
+	.i2c_dout       (i2c_dout       ),
+	.i2c_din        (i2c_din        ),
+	.i2c_ack        (i2c_ack        ),
+	.i2c_end        (i2c_end        ),
+`endif
 	.key_strobe     (key_strobe     ),
 	.key_pressed    (key_pressed    ),
 	.key_code       (key_code       ),
@@ -105,7 +256,42 @@ data_io data_io(
 	.ioctl_dout    ( ioctl_dout   )
 );
 
-//wire [24:0] sdram_addr_sig;
+reg         port1_req, port1_progress;
+wire        port1_ack;
+wire        sdram_download = ioctl_downl && ioctl_wr && ioctl_index == 8'd0;
+wire [7:0]  sdram_dout = !sdram_addr[0] ? wav_data_o[7:0] : wav_data_o[15:8];
+wire [24:0] sdram_addr, sdram_addr_old;
+reg         sdram_ack;
+wire        sdram_rd;
+wire        sdram_ready;
+wire [15:0] wav_data_o;
+
+always @(posedge clk_mem) begin
+	reg sdram_rd_old = 0, ioctl_wr_old = 0;
+	ioctl_wr_old <= ioctl_wr;
+	sdram_addr_old <= sdram_addr;
+
+	if (sdram_download) begin
+		sdram_rd_old <= 0;
+		port1_progress <= 0;
+		if (~ioctl_wr_old & ioctl_wr) begin
+			port1_req <= ~port1_req;
+		end
+	end else begin
+		sdram_rd_old <= sdram_rd;
+		if (!sdram_rd_old && sdram_rd) begin
+			if (sdram_addr[24:1] != sdram_addr_old[24:1]) begin
+				port1_req <= ~port1_req;
+				port1_progress <= 1;
+			end
+			else sdram_ack <= ~sdram_ack;
+		end
+		if (port1_req == port1_ack && port1_progress) begin
+			sdram_ack <= ~sdram_ack;
+			port1_progress <= 0;
+		end
+	end
+end
 
 reg reset = 1;
 reg rom_loaded = 0;
@@ -119,12 +305,10 @@ end
 
 reg	 [15:0] audio;
 wire        hs, vs, hb, vb;
-wire blankn = ~(vb | hb);
 wire  [7:0] r,g,b;
 
 system system_inst(
 	.clk					(clk_sys),
-	.clk_sfx				(clk_mem),
 	.reset				(reset),
 	.game_mode			(game_mode),
 	.pause				(btn_pause),
@@ -141,7 +325,7 @@ system system_inst(
 	.hblank				(hb),
 	.audio				(audio),
 	.dn_addr				(ioctl_addr),
-	.dn_index			(ioctl_index),
+	.dn_index			(ioctl_addr < 16'h8480 ? 8'd0 : ioctl_addr < 16'h8500 ? 8'd3 : 8'd2),
 	.dn_download		(ioctl_downl),
 	.dn_wr				(ioctl_wr),
 	.dn_data				(ioctl_dout),
@@ -151,37 +335,122 @@ system system_inst(
 	.sdram_dout			(sdram_dout)
 );
 
-mist_video #(.COLOR_DEPTH(6), .SD_HCNT_WIDTH(10)) mist_video(
-	.clk_sys        ( clk_vid          ),
+mist_dual_video #(.COLOR_DEPTH(8), .SD_HCNT_WIDTH(11), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+	.clk_sys        ( clk_mem          ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( blankn ? r[7:2] : 0),
-	.G              ( blankn ? g[7:2] : 0),
-	.B              ( blankn ? b[7:2] : 0),
-	.HSync          ( hs               ),
-	.VSync          ( vs               ),
+	.R              ( r                ),
+	.G              ( g                ),
+	.B              ( b                ),
+	.HBlank         ( hb               ),
+	.VBlank         ( vb               ),
+	.HSync          ( ~hs              ),
+	.VSync          ( ~vs              ),
 	.VGA_R          ( VGA_R            ),
 	.VGA_G          ( VGA_G            ),
 	.VGA_B          ( VGA_B            ),
 	.VGA_VS         ( VGA_VS           ),
 	.VGA_HS         ( VGA_HS           ),
-	.ce_divider     ( 1'b0             ),
+`ifdef USE_HDMI
+	.HDMI_R         ( HDMI_R           ),
+	.HDMI_G         ( HDMI_G           ),
+	.HDMI_B         ( HDMI_B           ),
+	.HDMI_VS        ( HDMI_VS          ),
+	.HDMI_HS        ( HDMI_HS          ),
+	.HDMI_DE        ( HDMI_DE          ),
+`endif
+	.clk_sdram      ( clk_mem          ),
+	.sdram_init     ( ~pll_locked      ),
+	.SDRAM_A        ( SDRAM_A          ),
+	.SDRAM_DQ       ( SDRAM_DQ         ),
+	.SDRAM_DQML     ( SDRAM_DQML       ),
+	.SDRAM_DQMH     ( SDRAM_DQMH       ),
+	.SDRAM_nWE      ( SDRAM_nWE        ),
+	.SDRAM_nCAS     ( SDRAM_nCAS       ),
+	.SDRAM_nRAS     ( SDRAM_nRAS       ),
+	.SDRAM_nCS      ( SDRAM_nCS        ),
+	.SDRAM_BA       ( SDRAM_BA         ),
+
+	.ram_din        ( {ioctl_dout, ioctl_dout} ),
+	.ram_dout       ( wav_data_o ),
+	.ram_addr       ( ioctl_downl ? ioctl_addr[22:1] - 16'h4280 : sdram_addr[22:1] ),
+	.ram_ds         ( ioctl_downl ? { ioctl_addr[0], ~ioctl_addr[0] } : 2'b11 ),
+	.ram_req        ( port1_req        ),
+	.ram_we         ( ioctl_downl      ),
+	.ram_ack        ( port1_ack        ),
+
 	.rotate         ( { 1'b0, rotate } ),
-	.scandoubler_disable( scandoublerD ),
-	.scanlines      ( scanlines        ),
+	.ce_divider     ( 4'd11            ),
 	.blend          ( blend            ),
-	.ypbpr          ( ypbpr            ),
-	.no_csync       ( no_csync         )
+	.scandoubler_disable (scandoublerD ),
+	.rotate_screen  ( rotate_screen    ),
+	.rotate_hfilter ( rotate_filter    ),
+	.rotate_vfilter ( rotate_filter    ),
+	.no_csync       ( no_csync         ),
+	.scanlines      ( scanlines        ),
+	.ypbpr          ( ypbpr            )
 	);
 
+`ifdef USE_HDMI
+
+i2c_master #(15_000_000) i2c_master (
+	.CLK         (clk_sys),
+
+	.I2C_START   (i2c_start),
+	.I2C_READ    (i2c_read),
+	.I2C_ADDR    (i2c_addr),
+	.I2C_SUBADDR (i2c_subaddr),
+	.I2C_WDATA   (i2c_dout),
+	.I2C_RDATA   (i2c_din),
+	.I2C_END     (i2c_end),
+	.I2C_ACK     (i2c_ack),
+
+	//I2C bus
+	.I2C_SCL     (HDMI_SCL),
+ 	.I2C_SDA     (HDMI_SDA)
+);
+
+	assign HDMI_PCLK = clk_vid;
+`endif
+
 dac #(.C_bits(16))dac(
-	.clk_i(clk_sys),
+	.clk_i(clk_vid),
 	.res_n_i(1),
 	.dac_i({~audio[15],audio[14:0]}),
 	.dac_o(AUDIO_L)
 	);
 
+`ifdef I2S_AUDIO
+i2s i2s (
+	.reset(1'b0),
+	.clk(clk_vid),
+	.clk_rate(32'd30_936_960),
+	.sclk(I2S_BCK),
+	.lrclk(I2S_LRCK),
+	.sdata(I2S_DATA),
+	.left_chan(audio),
+	.right_chan(audio)
+);
+`ifdef I2S_AUDIO_HDMI
+assign HDMI_MCLK = 0;
+always @(posedge clk_vid) begin
+	HDMI_BCK <= I2S_BCK;
+	HDMI_LRCK <= I2S_LRCK;
+	HDMI_SDATA <= I2S_DATA;
+end
+`endif
+`endif
+
+`ifdef SPDIF_AUDIO
+spdif spdif (
+	.rst_i(1'b0),
+	.clk_i(clk_vid),
+	.clk_rate_i(32'd30_936_960),
+	.spdif_o(SPDIF),
+	.sample_i({2{audio}})
+);
+`endif
 // Arcade inputs
 wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;
@@ -195,9 +464,9 @@ arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( 2'b01       ),
-	.joyswap     ( 1'b0        ),
-	.oneplayer   ( 1'b0        ),
+	.orientation ( {landscape, ~|rotate_screen} ),
+	.joyswap     ( joyswap     ),
+	.oneplayer   ( ~simultaneous2player ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),
 	.player1     ( {m_fireF, m_fireE, m_fireD, m_fireC, m_fireB, m_fireA, m_up, m_down, m_left, m_right} ),
 	.player2     ( {m_fire2F, m_fire2E, m_fire2D, m_fire2C, m_fire2B, m_fire2A, m_up2, m_down2, m_left2, m_right2} )
@@ -206,21 +475,20 @@ arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
 ///////////////////   CONTROLS   ////////////////////
 wire [9:0] Controls1 = {m_fireF, m_fireE, m_fireD, m_fireC, m_fireB, m_fireA, m_up, m_down, m_left, m_right}; 
 wire [9:0] Controls2 = {m_fire2F, m_fire2E, m_fire2D, m_fire2C, m_fire2B, m_fire2A, m_up2, m_down2, m_left2, m_right2};
-wire [9:0] joy = Controls1 | Controls2;
 reg simultaneous2player;
-wire p1_right = simultaneous2player ? Controls1[0] : joy[0];
-wire p2_right = simultaneous2player ? Controls2[0] : joy[0];
-wire p1_left = simultaneous2player ? Controls1[1] : joy[1];
-wire p2_left = simultaneous2player ? Controls2[1] : joy[1];
-wire p1_down = simultaneous2player ? Controls1[2] : joy[2];
-wire p2_down = simultaneous2player ? Controls2[2] : joy[2];
-wire p1_up = simultaneous2player ? Controls1[3] : joy[3];
-wire p2_up = simultaneous2player ? Controls2[3] : joy[3];
-wire p1_fire1 = simultaneous2player ? Controls1[4] : joy[4];
-wire p2_fire1 = simultaneous2player ? Controls2[4] : joy[4];
-wire p1_fire2 = simultaneous2player ? Controls1[5] : joy[5];
-wire p2_fire2 = simultaneous2player ? Controls2[5] : joy[5];
-wire p1_fire3 = simultaneous2player ? Controls1[6] : joy[6];
+wire p1_right = Controls1[0];
+wire p2_right = Controls2[0];
+wire p1_left = Controls1[1];
+wire p2_left = Controls2[1];
+wire p1_down = Controls1[2];
+wire p2_down = Controls2[2];
+wire p1_up = Controls1[3];
+wire p2_up = Controls2[3];
+wire p1_fire1 = Controls1[4];
+wire p2_fire1 = Controls2[4];
+wire p1_fire2 = Controls1[5];
+wire p2_fire2 = Controls2[5];
+wire p1_fire3 = Controls1[6];
 //wire p2_fire3 = simultaneous2player ? Controls2[6] : joy[6];	//unused
 
 wire start_p1 = m_one_player;
@@ -230,14 +498,11 @@ wire btn_pause = 1'b0;
 wire btn_dual_game_toggle = m_tilt;
 
 ///////////////////   DIPS   ////////////////////
-reg [7:0] sw[8];
-always @(posedge clk_sys)
-begin
-	if (ioctl_wr && (ioctl_index==8'd254) && !ioctl_addr[24:3]) sw[ioctl_addr[2:0]] <= ioctl_dout;
-end
+wire [7:0] sw[8];
+assign sw[0] = status[23:16];
 
 // Game metadata
-`include "rtl/games.v"
+`include "../rtl/games.v"
 
 // Extract per-game DIPs
 // - Alpha Fighter / Head On
@@ -317,7 +582,7 @@ wire [1:0] dip_wanted_lives = sw[0][3:2];
 
 
 ///////////////////   CORE INPUTS   ////////////////////
-reg [4:0] game_mode /*verilator public_flat*/;
+wire  [4:0] game_mode = core_mod[4:0]/*verilator public_flat*/;
 reg	[7:0]	IN_P1;
 reg	[7:0]	IN_P2;
 reg	[7:0]	IN_P3;
@@ -326,9 +591,6 @@ reg			landscape;
 
 always @(posedge clk_sys) 
 begin
-	// Set game mode
-	if (ioctl_wr && (ioctl_index==8'd1)) game_mode <= ioctl_dout[4:0];
-
 	// Set defaults
 	landscape <= 1'b0;
 	simultaneous2player <= 1'b0;
@@ -488,41 +750,6 @@ begin
 			IN_P4 <= { 2'b11, ~start_p2, ~p1_fire2, 1'b1, dip_wanted_bonuslife, 2'b11 };
 		end
 	endcase
-end
-
-///////////////////   WAVE AUDIO STORAGE   ///////////////////
-wire [7:0]  sdram_dout;
-wire [24:0] sdram_addr;
-reg         sdram_ack;
-reg         sdram_rd;
-wire sdram_ready;
-reg  [15:0] wav_data_o;
-wire sdram_download = ioctl_downl && ioctl_wr && ioctl_index == 8'd2;
-
-sdram sdram
-(
-	.*,
-	.init(~pll_locked),
-	.clk(clk_mem),
-
-	.addr(sdram_download ? ioctl_addr : sdram_addr[24:0]),
-	.we(sdram_download),
-	.rd(~sdram_download & sdram_rd),
-	.din(ioctl_dout),
-	.dout(wav_data_o),
-	.ready(sdram_ready)
-);
-
-always @(posedge clk_mem)
-begin
-	reg sdram_ready_last;
-	sdram_ready_last <= sdram_ready;
-	// Latch upper/lower SDRAM data out when data is ready
-	if(sdram_ready && ~sdram_ready_last) 
-	begin
-		sdram_dout <= !sdram_addr[0] ? wav_data_o[7:0] : wav_data_o[15:8];
-		sdram_ack <= ~sdram_ack;
-	end
 end
 
 endmodule 

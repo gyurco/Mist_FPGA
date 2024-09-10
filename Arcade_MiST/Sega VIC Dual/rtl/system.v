@@ -23,7 +23,6 @@
 
 module system (
 	input clk,
-	input clk_sfx,
 	input reset /*verilator public_flat*/,
 	input [4:0] game_mode,
 	input pause,
@@ -33,7 +32,7 @@ module system (
 	input [7:0] in_p2,
 	input [7:0] in_p3,
 	input [7:0] in_p4,
-	output reg ce_pix,
+	output ce_pix,
 	output [23:0] rgb,
 	output vsync,
 	output hsync,
@@ -60,7 +59,7 @@ module system (
 );
 
 // Game metadata
-//`include "games.v"
+`include "games.v"
 
 // Program ROM
 // ------------
@@ -70,7 +69,7 @@ module system (
 wire [7:0] pgrom_data_out;
 
 // Program ROM download write enable
-wire pgrom_wr = dn_addr[15] == 0 && dn_index == 8'd0 && dn_wr;
+wire pgrom_wr = dn_addr[23:15] == 0 && dn_index == 8'd0 && dn_wr;
 
 // Program ROM
 dpram #(15,8) pgrom
@@ -101,8 +100,8 @@ wire [7:0] prom1_data_out;
 wire [7:0] prom2_data_out;
 
 // PROM download write enables
-wire prom1_wr = dn_addr[15:5] == 11'b10000000001 && dn_index == 8'd0 && dn_wr;
-wire prom2_wr = dn_addr[15:5] == 11'b10000000010 && dn_index == 8'd0 && dn_wr;
+wire prom1_wr = dn_addr[23:16] == 0 && dn_addr[15:5] == 11'b10000000001 && dn_index == 8'd0 && dn_wr;
+wire prom2_wr = dn_addr[23:16] == 0 && dn_addr[15:5] == 11'b10000000010 && dn_index == 8'd0 && dn_wr;
 
 // PROM read addresses
 wire [4:0] prom_addr;
@@ -150,6 +149,8 @@ begin
 end
 assign prom_addr = reset ? 5'b0 : prom1_data_out[4:0];
 
+wire src_prev = prom1_data_out[5];
+
 wire m1 = u67_u51[2];
 wire m2 = u67_u51[3];
 wire m4 = u67_u51[4];
@@ -163,6 +164,9 @@ always @(posedge clk)
 begin
 	u50_u49 <= prom2_data_out;
 end
+
+wire phi_prev = ~prom2_data_out[1];
+
 wire wg = u50_u49[7];
 //wire vcas = ~u50_u49[6];
 wire u72_clr = u50_u49[4];
@@ -171,7 +175,7 @@ wire vras = u50_u49[2];
 wire phi = ~u50_u49[1];
 
 reg phi_last;
-reg cpu_en;
+wire cpu_en;
 
 reg wait_n = 1'b1;
 wire mreq = ~mreq_n;
@@ -191,15 +195,8 @@ begin
 	end
 end
 
-reg src_last;
-always @(posedge clk)
-begin
-	if(reset) src_last <= 1'b0;
-	src_last <= src;
-	ce_pix <= (src && !src_last);
-	phi_last <= phi;
-	cpu_en <= (phi && !phi_last);
-end
+assign ce_pix = !src & src_prev;
+assign cpu_en = phi & !phi_prev;
 
 // U53 - Z80 CPU
 wire mreq_n;
@@ -210,7 +207,7 @@ wire [15:0] cpu_addr;
 wire [7:0] cpu_data_in;
 wire [7:0] cpu_data_out;
 wire RESET = reset || coin_start > 6'b0;
-tv80e cpu (
+t80s cpu (
 	.clk(clk),
 	.cen(cpu_en),
 	.reset_n(~RESET),
@@ -227,8 +224,8 @@ tv80e cpu (
 	.halt_n(),
 	.busak_n(),
 	.A(cpu_addr),
-	.di(cpu_data_in),
-	.dout(cpu_data_out)
+	.DI(cpu_data_in),
+	.DO(cpu_data_out)
 );
 
 // CPU outputs
@@ -533,6 +530,7 @@ wire [5:0] vic_data_out;
 vic vic (
 	.clk(clk),
 	.reset(reset),
+	.ce_pix(ce_pix),
 
 	.srl(srl),
 	.src(src),
@@ -555,18 +553,11 @@ vic vic (
 );
 
 // Video RAM
-reg video;
+wire video;
 reg vras_last;
 reg [7:0] char_code;
 reg [7:0] char_data;
 reg [31:0] debug_counter;
-
-// Offset vertical counter allow correct character to be selected in time
-// - Still not entirely sure why this is necessary - something to do with chain of async RAM modules in original board?
-wire [8:0] vcnt_fixed = vcnt - 9'd1;
-
-// Select 'character' index (flipped)
-wire [2:0] char_index = (3'd7 - (hcnt[2:0]));
 
 always @(posedge clk)
 begin
@@ -588,17 +579,17 @@ begin
 		begin
 			if(hcnt >= 9'h100)
 			begin
-				ram_addr <= { 2'b0, vcnt_fixed[7:3], 5'd0 };
+				ram_addr <= { 2'b0, vcnt/*_fixed*/[7:3], 5'd0 };
 			end
 			else
 			begin
-				ram_addr <= { 2'b0, vcnt_fixed[7:3], hcnt[7:3] } + 12'd1;
+				ram_addr <= { 2'b0, vcnt/*_fixed*/[7:3], hcnt[7:3] } + 12'd1;
 			end
 		end
 		3'b100:
 		begin // Use selected character code and vertical line within current cell for RAM access (to read pixel data)
 			char_code = ram_data_out;
-			ram_addr <= { 1'b1, char_code, vcnt_fixed[2:0] };
+			ram_addr <= { 1'b1, ram_data_out, vcnt/*_fixed*/[2:0] };
 		end
 		default:
 		begin 
@@ -606,17 +597,13 @@ begin
 		endcase
 	end
 
-	// Latch character line data out of RAM
-	// - This index 22 of sequence ROM is a hack - but works?
-	if(prom_addr == 5'd22)
-	begin
-		char_data = ram_data_out;
-	end
-
-	// Latch current pixel from character line
-	if(!ce_pix) video <= char_data[char_index];
+    if (ce_pix) begin
+        char_data <= {char_data[6:0], 1'b0};
+        if (srl) char_data <= ram_data_out;
+    end
 
 end
+assign video = char_data[7];
 
 // Video RAM
 // - U63 > U56 (Head On)
@@ -659,7 +646,7 @@ dpram #(12,8) ram
 wire [7:0] colprom_data_out;
 
 // Colour PROM download write enable
-wire colprom_wr = dn_addr[15:5] == 11'b10000000000 && dn_index == 8'd0 && dn_wr;
+wire colprom_wr = dn_addr[23:16] == 0 && dn_addr[15:5] == 11'b10000000000 && dn_index == 8'd0 && dn_wr;
 
 // Colour PROM read address
 wire [4:0] colprom_addr;
@@ -740,13 +727,8 @@ wire [7:0] colprom_data_out_fixed = config_invertcolprom ? ~colprom_data_out : c
 
 // U43 - Flip flop - Latch 6 bits of colour PROM data when colr goes high
 reg [5:0] u43_q;
-wire colr = ~srl;
-reg colr_last;
 always @(posedge clk)
-begin
-	colr_last <= colr;
-	if(colr && colr_last) u43_q <= { colprom_data_out_fixed[7:5], colprom_data_out_fixed[3:1] };
-end
+	if(ce_pix & srl) u43_q <= { colprom_data_out_fixed[7:5], colprom_data_out_fixed[3:1] };
 
 // U42 - Data selector - Selects between background and foreground colours from latched U43 data
 wire [2:0] fgcol = u43_q[5:3];
@@ -928,8 +910,7 @@ sound_carnival sound_carnival
 // - Used by Carnival, Invinco and Pulsar to emulate analog sound board by playing WAV samples sourced from MAME project
 wire [15:0] wave_sound_out;
 wave_sound wave (
-	.clk(clk_sfx),
-	.ce_sys(clk),
+	.clk(clk),
 	.reset(reset),
 	.pause(pause),
 	.dn_addr(dn_addr),
