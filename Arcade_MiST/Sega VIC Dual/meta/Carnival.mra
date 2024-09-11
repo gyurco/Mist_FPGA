@@ -13,8 +13,7 @@
 	<num_buttons>1</num_buttons>
 	<buttons default="B,Start,Select" names="Fire,-,-,-,-,-,Start,Coin,P2 Start,-"></buttons>
 	<switches default="00" base="16" page_id="1" page_name="Switches">
-		<dip bits="0" ids="Off,On" name="Demo sounds" values="1,0">
-		</dip>
+		<dip bits="0" ids="On,Off" name="Demo sounds"/>
 	</switches>
 	<rom index="1">
 		<part>03</part>
