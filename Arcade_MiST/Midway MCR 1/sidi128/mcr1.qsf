@@ -431,7 +431,7 @@ set_global_assignment -name VHDL_FILE ../rtl/cmos_ram.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv
 set_global_assignment -name VHDL_FILE ../rtl/pll_mist.vhd
 set_global_assignment -name QIP_FILE ../../../common/IO/Z80CTC/z80ctc.qip
-set_global_assignment -name QIP_FILE ../.././../common/CPU/T80/T80.qip
+set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
 set_global_assignment -name VHDL_FILE ../../../common/Sound/ym2149/vol_table_array.vhd
 set_global_assignment -name VHDL_FILE ../../../common/Sound/ym2149/YM2149.vhd
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip

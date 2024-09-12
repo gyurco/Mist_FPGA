@@ -481,7 +481,7 @@ williams2_colormix williams2_colormix (
 	.vga_b     ( blue  )
 );
 
-mist_dual_video #(.COLOR_DEPTH(8), .SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+mist_dual_video #(.COLOR_DEPTH(8), .SD_HCNT_WIDTH(9), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys        ( clk_mem          ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),

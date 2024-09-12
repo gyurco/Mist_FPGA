@@ -249,7 +249,6 @@ set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name VERILOG_FILE ../../../common/CPU/MC6809/mc6809is.v
 set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
 set_global_assignment -name QIP_FILE ../../../common/Sound/jt12/target/quartus/jt03.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jt49/syn/quartus/jt49.qip
 set_global_assignment -name VERILOG_SHOW_LMF_MAPPING_MESSAGES OFF
 set_global_assignment -name VERILOG_MACRO "EXT_ROM=<None>"
 set_global_assignment -name FORCE_SYNCH_CLEAR ON
