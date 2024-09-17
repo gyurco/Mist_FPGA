@@ -5,6 +5,7 @@ module Megasys1_top (
     input         pause_cpu,
     input         refresh_mod,
     input         turbo_68k,
+    output        flipped,
 
     input         ioctl_download,
     input  [26:0] ioctl_addr,
@@ -63,6 +64,8 @@ localparam IGANINJU  = 15;
 localparam JITSUPRO  = 16;
 
 localparam  CLKSYS=72;
+
+assign flipped = dip_flip;
 
 wire [7:0]  irq1_scanline = pcb == STDRAGON ? 8'h5a : 8'h10;
 

@@ -146,7 +146,7 @@ localparam bit BIG_OSD = 0;
 `endif
 
 // remove this if the 2nd chip is actually used
-
+/*
 `ifdef DUAL_SDRAM
 assign SDRAM2_A = 13'hZZZZ;
 assign SDRAM2_BA = 0;
@@ -160,7 +160,7 @@ assign SDRAM2_nCAS = 1;
 assign SDRAM2_nRAS = 1;
 assign SDRAM2_nWE = 1;
 `endif
-
+*/
 
 `include "build_id.v"
 
@@ -169,10 +169,10 @@ assign SDRAM2_nWE = 1;
 localparam CONF_STR = {
 	`CORE_NAME, ";;",
 	"O2,Rotate Controls,Off,On;",
-//`ifdef DUAL_SDRAM
-//	"O78,Orientation,Vertical,Clockwise,Anticlockwise;",
-//	"O9,Rotation filter,Off,On;",
-//`endif
+`ifdef DUAL_SDRAM
+	"O78,Orientation,Vertical,Clockwise,Anticlockwise;",
+	"O9,Rotation filter,Off,On;",
+`endif
 	"O34,Scanlines,Off,25%,50%,75%;",
 	"O5,Blending,Off,On;",
 	"O6,Joystick Swap,Off,On;",
@@ -190,9 +190,8 @@ wire        rotate    = status[2];
 wire  [1:0] scanlines = status[4:3];
 wire        blend     = status[5];
 wire        joyswap   = status[6];
-wire  [1:0] rotate_screen = 0;
-//wire  [1:0] rotate_screen = status[8:7];
-//wire        rotate_filter = status[9];
+wire  [1:0] rotate_screen = status[8:7];
+wire        rotate_filter = status[9];
 wire        service = status[10];
 wire        refresh_mod = status[11];
 wire        stereo_en = status[12];
@@ -201,8 +200,8 @@ wire  [7:0] dsw1 = status[23:16];
 wire  [7:0] dsw2 = status[31:24];
 wire  [3:0] pcb = core_mod[3:0];
 
-wire        flipped = 0;
-wire        tate = 0;
+wire        flipped;
+wire        tate = core_mod == 14; // Plus Alpha
 
 assign LED = ~ioctl_downl;
 assign SDRAM_CLK = clk_72;
@@ -215,7 +214,7 @@ pll_mist pll(
 	.c0(clk_72),
 	.locked(pll_locked)
 	);
-/*
+
 `ifdef DUAL_SDRAM
 wire pll2_locked, clk2_72;
 pll_mist pll2(
@@ -226,7 +225,7 @@ pll_mist pll2(
 assign SDRAM2_CKE = 1;
 assign SDRAM2_CLK = clk2_72;
 `endif
-*/
+
 // reset generation
 reg reset = 1;
 reg rom_loaded = 0;
@@ -337,10 +336,11 @@ Megasys1_top top
 	.pcb          ( pcb        ),
 	.pause_cpu    ( pause_cpu  ),
 	.refresh_mod  ( refresh_mod),
+	.flipped      ( flipped    ),
 
 	.p1           ( p1         ),
 	.p2           ( p2         ),
-	.dsw          ( {dsw2, dsw1} ),
+	.dsw          ( {dsw1, dsw2} ),
 	.system       ( system     ),
 
 	.hbl          ( hb         ),
@@ -372,11 +372,11 @@ Megasys1_top top
 );
 
 mist_dual_video #(.COLOR_DEPTH(8),.OUT_COLOR_DEPTH(VGA_BITS),.SD_HCNT_WIDTH(10),.USE_BLANKS(1'b1),.BIG_OSD(BIG_OSD)) mist_video(
-//`ifdef DUAL_SDRAM
-//	.clk_sys(clk2_72),
-//`else
+`ifdef DUAL_SDRAM
+	.clk_sys(clk2_72),
+`else
 	.clk_sys(clk_72),
-//`endif
+`endif
 	.SPI_SCK(SPI_SCK),
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
@@ -400,7 +400,6 @@ mist_dual_video #(.COLOR_DEPTH(8),.OUT_COLOR_DEPTH(VGA_BITS),.SD_HCNT_WIDTH(10),
 	.HDMI_HS        ( HDMI_HS          ),
 	.HDMI_DE        ( HDMI_DE          ),
 `endif
-/*
 `ifdef DUAL_SDRAM
 	.clk_sdram      ( clk2_72          ),
 	.sdram_init     ( ~pll2_locked     ),
@@ -417,9 +416,8 @@ mist_dual_video #(.COLOR_DEPTH(8),.OUT_COLOR_DEPTH(VGA_BITS),.SD_HCNT_WIDTH(10),
 	.rotate_hfilter ( rotate_filter    ),
 	.rotate_vfilter ( rotate_filter    ),
 `endif
-*/
 	.no_csync(no_csync),
-	.rotate({~flipped,rotate}),
+	.rotate({flipped,rotate}),
 	.ce_divider(4'd11), // pix clock = 72/12
 	.blend(blend),
 	.scandoubler_disable(scandoublerD),
@@ -511,7 +509,7 @@ arcade_inputs #(.START1(8), .START2(9), .COIN1(10), .COIN2(11)) inputs (
 	.joystick_0  ( joystick_0  ),
 	.joystick_1  ( joystick_1  ),
 	.rotate      ( rotate      ),
-	.orientation ( {~flipped, tate ^ |rotate_screen} ),
+	.orientation ( {flipped, tate ^ |rotate_screen} ),
 	.joyswap     ( joyswap     ),
 	.oneplayer   ( 1'b0        ),
 	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),
