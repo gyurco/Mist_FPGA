@@ -198,7 +198,7 @@ wire        stereo_en = status[12];
 
 wire  [7:0] dsw1 = status[23:16];
 wire  [7:0] dsw2 = status[31:24];
-wire  [3:0] pcb = core_mod[3:0];
+wire  [4:0] pcb = core_mod[4:0];
 
 wire        flipped;
 wire        tate = core_mod == 14; // Plus Alpha
