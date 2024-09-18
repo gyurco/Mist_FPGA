@@ -109,7 +109,10 @@ wire [15:0] spriterom_D = ~n_spriterom0_en ? {eprom11_D, eprom9_D} : {eprom12_D,
 //Generate HBlank (active high) while the horizontal counter is between 138 and 268
 //While the Konami 082 custom chip generates VBlank, HBlank is generated externally using discrete logic, in this case, a
 //combination of the 74LS74 at 4A and half of the 74LS74 at 4B
-wire hblk = ({n_h256, h128, h64, h32, h16, h8, h4, h2, h1} > 137 && {n_h256, h128, h64, h32, h16, h8, h4, h2, h1} < 269);
+reg hblk;
+always @(posedge clk_49m)
+	if (pixel_clk_en)
+		hblk <= ({n_h256, h128, h64, h32, h16, h8, h4, h2, h1} > 137 && {n_h256, h128, h64, h32, h16, h8, h4, h2, h1} < 269);
 
 //Output video signal from color PROMs, otherwise output black if in HBlank or VBlank
 //This is normally achieved on the PCB by disabling the output of the 74LS157 at 3D when in HBlank and clearing the outputs of the
