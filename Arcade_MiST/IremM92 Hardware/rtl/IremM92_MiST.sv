@@ -221,10 +221,11 @@ pll_mist pll(
 wire pll2_locked;
 pll_rot pll_rot(
 	.inclk0(CLOCK_27),
-	.c0(SDRAM2_CLK), // 80 MHz
+	.c0(CLK2_80M), // 80 MHz
 	.locked(pll2_locked)
 	);
 assign SDRAM2_CKE = 1;
+assign SDRAM2_CLK = CLK2_80M;
 `endif
 
 wire [31:0] status;
@@ -587,7 +588,11 @@ m92 m92(
 );
 
 mist_dual_video #(.COLOR_DEPTH(8), .SD_HCNT_WIDTH(10), .USE_BLANKS(1), .OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD)) mist_video(
+`ifdef DUAL_SDRAM
+	.clk_sys        ( CLK2_80M         ),
+`else
 	.clk_sys        ( CLK_80M          ),
+`endif
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
@@ -623,11 +628,11 @@ mist_dual_video #(.COLOR_DEPTH(8), .SD_HCNT_WIDTH(10), .USE_BLANKS(1), .OUT_COLO
 	.SDRAM_nRAS     ( SDRAM2_nRAS      ),
 	.SDRAM_nCS      ( SDRAM2_nCS       ),
 	.SDRAM_BA       ( SDRAM2_BA        ),
-`endif
-	.rotate         ( { orientation[1], rotate } ),
 	.rotate_screen  ( rotate_screen    ),
 	.rotate_hfilter ( rotate_filter    ),
 	.rotate_vfilter ( rotate_filter    ),
+`endif
+	.rotate         ( { orientation[1], rotate } ),
 	.ce_divider     ( 4'd11            ),
 	.scandoubler_disable( scandoublerD ),
 	.scanlines      ( scanlines        ),
