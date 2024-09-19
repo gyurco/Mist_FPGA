@@ -281,7 +281,7 @@ data_io data_io(
 wire [24:0] bg_ioctl_addr = ioctl_addr - 16'hC000;
 
 reg port1_req, port2_req;
-sdram sdram(
+sdram #(10'd48) sdram(
 	.*,
 	.init_n        ( pll_locked   ),
 	.clk           ( clock_48      ),

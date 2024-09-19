@@ -62,6 +62,8 @@ module sdram (
 	output reg [15:0] bg_q
 );
 
+parameter  MHZ = 16'd80; // 80 MHz default clock, set it to proper value to calculate refresh rate
+
 localparam RASCAS_DELAY   = 3'd2;   // tRCD=20ns -> 2 cycles@<100MHz
 localparam BURST_LENGTH   = 3'b000; // 000=1, 001=2, 010=4, 011=8
 localparam ACCESS_TYPE    = 1'b0;   // 0=sequential, 1=interleaved
@@ -72,7 +74,7 @@ localparam NO_WRITE_BURST = 1'b1;   // 0= write burst enabled, 1=only single acc
 localparam MODE = { 3'b000, NO_WRITE_BURST, OP_MODE, CAS_LATENCY, ACCESS_TYPE, BURST_LENGTH}; 
 
 // 64ms/8192 rows = 7.8us -> 842 cycles@108MHz
-localparam RFRSH_CYCLES = 10'd500;
+localparam RFRSH_CYCLES = 16'd78*MHZ/4'd10;
 
 // ---------------------------------------------------------------------
 // ------------------------ cycle state machine ------------------------
@@ -150,7 +152,7 @@ assign SDRAM_nWE  = sd_cmd[0];
 reg [24:1] addr_latch[2];
 reg [24:1] addr_latch_next[2];
 reg [16:1] addr_last[2];
-reg [16:2] addr_last2[2];
+reg [16:1] addr_last2[2];
 reg [15:0] din_latch[2];
 reg  [1:0] oe_latch;
 reg  [1:0] we_latch;
@@ -169,7 +171,7 @@ reg  [1:0] next_port[2];
 reg  [1:0] port[2];
 
 reg        refresh;
-reg [10:0] refresh_cnt;
+reg [15:0] refresh_cnt;
 wire       need_refresh = (refresh_cnt >= RFRSH_CYCLES);
 
 // PORT1: bank 0,1
@@ -270,7 +272,7 @@ always @(posedge clk) begin
 				sd_cmd <= CMD_ACTIVE;
 				SDRAM_A <= addr_latch_next[1][22:10];
 				SDRAM_BA <= addr_latch_next[1][24:23];
-				addr_last2[next_port[1]] <= addr_latch_next[1][16:2];
+				addr_last2[next_port[1]] <= addr_latch_next[1][16:1];
 				if (next_port[1] == PORT_REQ) begin
 					{ oe_latch[1], we_latch[1] } <= { ~port1_we, port1_we };
 					ds[1] <= port2_ds;
@@ -284,7 +286,7 @@ always @(posedge clk) begin
 
 			if (next_port[1] == PORT_NONE && need_refresh && !we_latch[0] && !oe_latch[0]) begin
 				refresh <= 1'b1;
-				refresh_cnt <= 0;
+				refresh_cnt <= refresh_cnt - RFRSH_CYCLES;
 				sd_cmd <= CMD_AUTO_REFRESH;
 			end
 		end

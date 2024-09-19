@@ -285,7 +285,7 @@ wire [7:0] sound_Din =
 
 //Latch data coming in from CPU board
 wire [7:0] cpubrd_Dlatch;
-always @(posedge clk_49m) begin
+always @(posedge clk_14m) begin
 	reg sound_data_d, sound_data_d2, sound_data_d3;
 	// synchronize between the cpu board and the sound board clock domains
 	{sound_data_d3, sound_data_d2, sound_data_d} <= {sound_data_d2, sound_data_d, sound_data};
@@ -298,14 +298,14 @@ wire [1:0] sn0_filter;
 wire sn2_filter, sn3_filter;
 wire [7:0] sn_D;
 
-always @(posedge clk_49m) begin
+always @(posedge clk_14m) begin
 	if (!filter_latch) {sn2_filter, sn3_filter, sn0_filter[0], sn0_filter[1]} <= {sound_A[7], sound_A[8], sound_A[3], sound_A[4]}; // C7
 	if (!sn_latch) sn_D <= sound_Dout;  // E8
 end
 
 //Generate interrupts for the Z80
 reg s_int;
-always @(posedge clk_49m) begin
+always @(posedge clk_14m) begin
 	reg sound_on_d3, sound_on_d2, sound_on_d;
 	{sound_on_d3, sound_on_d2, sound_on_d} <= {sound_on_d2, sound_on_d, sound_on};
 	if (!n_reset) s_int <= 1;
