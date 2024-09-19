@@ -19,3 +19,6 @@
 [submodule "common/Sound/jt6295"]
 	path = common/Sound/jt6295
 	url = https://github.com/jotego/jt6295.git
+[submodule "common/Sound/jt51"]
+	path = common/Sound/jt51
+	url = https://github.com/jotego/jt51.git

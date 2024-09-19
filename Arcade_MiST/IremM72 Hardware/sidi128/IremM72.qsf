@@ -427,6 +427,6 @@ set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/T80/T80.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/v30/V30.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/MC8051/mc8051.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/jt51.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/hdl/jt51.qip
 
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

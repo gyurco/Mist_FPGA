@@ -428,7 +428,7 @@ set_global_assignment -name QIP_FILE ../rtl/m107.qip
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/v30/V30.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/v33/v33.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/jt51.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/hdl/jt51.qip
 set_global_assignment -name QIP_FILE pll_rot.qip
 set_global_assignment -name QIP_FILE pll_mist.qip
 set_global_assignment -name USE_SIGNALTAP_FILE output_files/cpu.stp

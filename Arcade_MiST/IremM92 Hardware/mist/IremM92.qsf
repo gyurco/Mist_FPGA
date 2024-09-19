@@ -246,7 +246,7 @@ set_global_assignment -name QIP_FILE ../rtl/m92.qip
 set_global_assignment -name QIP_FILE ../../../common/mist/mist.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/v30/V30.qip
 set_global_assignment -name QIP_FILE ../../../common/CPU/v33/v33.qip
-set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/jt51.qip
+set_global_assignment -name QIP_FILE ../../../common/Sound/jt51/hdl/jt51.qip
 set_global_assignment -name AUTO_RESOURCE_SHARING ON
 set_global_assignment -name SIGNALTAP_FILE output_files/cpu.stp
 set_global_assignment -name SIGNALTAP_FILE output_files/dio.stp
