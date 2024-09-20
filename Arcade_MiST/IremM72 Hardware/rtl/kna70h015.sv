@@ -45,7 +45,9 @@ module kna70h015 (
     output HS,
     output VS,
 
-    input video_50hz
+    input video_50hz,
+    input video_57hz,
+    input video_60hz
 );
 
 
@@ -99,7 +101,7 @@ always @(posedge CLK_32M) begin
 
         if (h_count[1]) int_d_latch <= INT_D;
 
-        if (v_count == (S24H ? 9'h1e1 : 9'h18d)) v_count <= (S24H ? 9'h01e : (video_50hz ? 9'h056 : 9'h072));
+        if (v_count == (S24H ? 9'h1e1 : 9'h18d)) v_count <= (S24H ? 9'h01e : (video_50hz ? 9'h056 : video_57hz ? 9'h07c : video_60hz ? 9'h088 : 9'h072));
     end
 end
 
