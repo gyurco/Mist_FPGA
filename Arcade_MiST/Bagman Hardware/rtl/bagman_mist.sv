@@ -333,7 +333,7 @@ bagman bagman(
 	.dl_data(ioctl_dout)
 	);
 
-mist_dual_video #(.COLOR_DEPTH(4), .OUT_COLOR_DEPTH(VGA_BITS), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
+mist_dual_video #(.COLOR_DEPTH(3), .OUT_COLOR_DEPTH(VGA_BITS), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys        ( clock_48         ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
