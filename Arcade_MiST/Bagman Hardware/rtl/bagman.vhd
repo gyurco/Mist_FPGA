@@ -296,9 +296,11 @@ end process;
 ------------------------------------
 process (pickin, cpu_addr, prog_do, wram2_do, tile_ram_latch, color_ram_latch, dipsw, pal16r6_data)
 begin
+	roms_rd <= '0';
 	case cpu_addr(15 downto 12) is
 		when x"0"|x"1"|x"2"|x"3"|x"4"|x"5"|x"C"|x"D"|x"E"|x"F" =>
 			cpu_di_mem <= prog_do;
+			roms_rd <= '1';
 		when x"6"|x"7"|x"8"|x"9"|x"A"|x"B" =>
 			if pickin = '1' then
 				case cpu_addr(15 downto 11) is
@@ -689,7 +691,6 @@ port map(
 
 roms_addr <= cpu_addr(15 downto 0);
 prog_do <= roms_do;
-roms_rd <= '1';
   
 -- working ram2 - 6000-67ff
 wram2 : entity work.gen_ram
