@@ -351,16 +351,16 @@ vectrex vectrex (
 	.cart_addr    ( cart_addr		),
 	.cart_do      ( cart_do		),
 	.cart_rd      ( cart_rd		),	
-	.btn11        ( status[4] ? joystick_1[4] : joystick_0[4]),
-	.btn12        ( status[4] ? joystick_1[5] : joystick_0[5]),
-	.btn13        ( status[4] ? joystick_1[6] : joystick_0[6]),
-	.btn14        ( status[4] ? joystick_1[7] : joystick_0[7]),
+	.btn11        ( m_fire1[0]  ),
+	.btn12        ( m_fire1[1]  ),
+	.btn13        ( m_fire1[2]  ),
+	.btn14        ( m_fire1[3]  ),
 	.pot_x_1      ( pot_x_1			),
 	.pot_y_1      ( pot_y_1			),
-	.btn21        ( status[4] ? joystick_0[4] : joystick_1[4]),
-	.btn22        ( status[4] ? joystick_0[5] : joystick_1[5]),
-	.btn23        ( status[4] ? joystick_0[6] : joystick_1[6]),
-	.btn24        ( status[4] ? joystick_0[7] : joystick_1[7]),
+	.btn21        ( m_fire2[0]  ),
+	.btn22        ( m_fire2[1]  ),
+	.btn23        ( m_fire2[2]  ),
+	.btn24        ( m_fire2[3]  ),
 	.pot_x_2      ( pot_x_2			),
 	.pot_y_2      ( pot_y_2			),
 	.leds         ( ),
@@ -383,8 +383,8 @@ i2s i2s (
 	.sclk(I2S_BCK),
 	.lrclk(I2S_LRCK),
 	.sdata(I2S_DATA),
-	.left_chan({3'd0, audio, 3'd0}),
-	.right_chan({3'd0, audio, 3'd0})
+	.left_chan({{3{~audio[9]}}, audio[8:0], 4'd0}),
+	.right_chan({{3{~audio[9]}}, audio[8:0], 4'd0})
 );
 `ifdef I2S_AUDIO_HDMI
 assign HDMI_MCLK = 0;
@@ -402,7 +402,7 @@ spdif spdif (
 	.clk_i(clk_24),
 	.clk_rate_i(32'd24_000_000),
 	.spdif_o(SPDIF),
-	.sample_i({2{3'd0, audio, 3'd0}})
+	.sample_i({2{{3{~audio[9]}}, audio[8:0], 4'd0}})
 );
 `endif
 
@@ -480,5 +480,28 @@ data_io data_io (
 	.ioctl_addr    ( ioctl_addr   ),
 	.ioctl_dout    ( ioctl_dout   )
 	);
+
+wire m_up1, m_down1, m_left1, m_right1, m_up1B, m_down1B, m_left1B, m_right1B;
+wire m_up2, m_down2, m_left2, m_right2, m_up2B, m_down2B, m_left2B, m_right2B;
+wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
+wire [11:0] m_fire1, m_fire2;
+
+arcade_inputs inputs (
+	.clk         ( clk_24      ),
+	.key_strobe  ( key_strobe  ),
+	.key_pressed ( key_pressed ),
+	.key_code    ( key_code    ),
+	.joystick_0  ( joystick_0  ),
+	.joystick_1  ( joystick_1  ),
+	.joystick_2  ( joystick_2  ),
+	.joystick_3  ( joystick_3  ),
+	.rotate      ( 1'b0        ),
+	.orientation ( 2'b00       ),
+	.joyswap     ( status[4]   ),
+	.oneplayer   ( 1'b0        ),
+	.controls    ( {m_tilt, m_coin4, m_coin3, m_coin2, m_coin1, m_four_players, m_three_players, m_two_players, m_one_player} ),
+	.player1     ( {m_up1B, m_down1B, m_left1B, m_right1B, m_fire1, m_up1, m_down1, m_left1, m_right1} ),
+	.player2     ( {m_up2B, m_down2B, m_left2B, m_right2B, m_fire2, m_up2, m_down2, m_left2, m_right2} )
+);
 
 endmodule 
