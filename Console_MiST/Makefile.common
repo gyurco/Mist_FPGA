@@ -1,0 +1,88 @@
+TARGET=mist
+
+### project ###
+#PROJECT=
+PROJECT_OUTPUT=$(TARGET)/output_files
+
+### programs ###
+MAP=quartus_map
+FIT=quartus_fit
+ASM=quartus_asm
+PGM=quartus_pgm
+STA=quartus_sta
+QSH=quartus_sh
+
+ASSIGNMENT_FILES = $(TARGET)/$(PROJECT).qpf $(TARGET)/$(PROJECT).qsf
+
+BUILD_ID=build_id.v
+
+###################################################################
+# Main Targets
+#
+# all: build everything
+# clean: remove output files and database
+###################################################################
+
+all: $(TARGET)/smart $(TARGET)/$(BUILD_ID) $(PROJECT_OUTPUT)/$(PROJECT).rbf $(PROJECT_OUTPUT)/$(PROJECT).sta.rpt
+
+clean:
+	rm -rf *.rpt *.chg smart.log build_id.v build_id.vhd *.htm *.eqn *.pin *.sof *.pof db
+
+map: $(TARGET)/smart.log $(PROJECT_OUTPUT)/$(PROJECT).map.rpt
+fit: $(TARGET)/smart.log $(PROJECT_OUTPUT)/$(PROJECT).fit.rpt
+asm: $(TARGET)/smart.log $(PROJECT_OUTPUT)/$(PROJECT).asm.rpt
+sta: $(TARGET)/smart.log $(PROJECT_OUTPUT)/$(PROJECT).sta.rpt
+
+###################################################################
+# Executable Configuration
+###################################################################
+
+MAP_ARGS =
+FIT_ARGS =
+ASM_ARGS =
+STA_ARGS =
+
+###################################################################
+# Target implementations
+###################################################################
+
+STAMP = echo done >
+
+$(PROJECT_OUTPUT)/$(PROJECT).map.rpt: $(TARGET)/map.chg
+	cd $(TARGET) && $(MAP) $(MAP_ARGS) $(PROJECT)
+	$(STAMP) $(TARGET)/fit.chg
+
+$(PROJECT_OUTPUT)/$(PROJECT).fit.rpt: $(TARGET)/fit.chg $(PROJECT_OUTPUT)/$(PROJECT).map.rpt
+	cd $(TARGET) && $(FIT) $(FIT_ARGS) $(PROJECT)
+	$(STAMP) $(TARGET)/asm.chg
+	$(STAMP) $(TARGET)/sta.chg
+
+$(PROJECT_OUTPUT)/$(PROJECT).asm.rpt: $(TARGET)/asm.chg $(PROJECT_OUTPUT)/$(PROJECT).fit.rpt
+	cd $(TARGET) && $(ASM) $(ASM_ARGS) $(PROJECT)
+
+$(PROJECT_OUTPUT)/$(PROJECT).sta.rpt: $(TARGET)/sta.chg $(PROJECT_OUTPUT)/$(PROJECT).fit.rpt
+	cd $(TARGET) && $(STA) $(STA_ARGS) $(PROJECT)
+
+$(PROJECT_OUTPUT)/$(PROJECT).rbf: $(PROJECT_OUTPUT)/$(PROJECT).asm.rpt
+
+$(TARGET)/$(BUILD_ID):
+	cd $(TARGET) && $(QSH) -t build_id.tcl
+
+
+$(TARGET)/smart: $(ASSIGNMENT_FILES)
+	cd $(TARGET) && $(QSH) --determine_smart_action $(PROJECT) > smart.log
+
+$(TARGET)/smart.log: $(TARGET)/smart
+
+###################################################################
+# Project initialization
+###################################################################
+
+$(TARGET)/map.chg:
+	$(STAMP) $(TARGET)/map.chg
+$(TARGET)/fit.chg:
+	$(STAMP) $(TARGET)/fit.chg
+$(TARGET)/sta.chg:
+	$(STAMP) $(TARGET)/sta.chg
+$(TARGET)/asm.chg:
+	$(STAMP) $(TARGET)/asm.chg

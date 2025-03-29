@@ -741,7 +741,7 @@ begin
 				if hcnt_video = 3       then frame_line <= '1'; end if;
 				if hcnt_video = max_h+3 then frame_line <= '0'; end if;				
 			elsif vcnt_video > 0 and vcnt_video < (max_v-1) then 
-				  if hcnt_video = 3 or hcnt_video = max_h+2 then frame_line <= '1';
+				  if hcnt_video = 3 or hcnt_video = max_h+1 then frame_line <= '1';
 				  else frame_line <= '0'; end if;
 			else frame_line <= '0';	end if;
 			
