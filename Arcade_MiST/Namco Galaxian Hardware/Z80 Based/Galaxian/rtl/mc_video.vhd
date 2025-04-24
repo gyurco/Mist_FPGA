@@ -394,8 +394,8 @@ begin
 	W_3L_Y  <= W_3L_B when W_H_FLIP2X = '1' else W_3L_A;   --  (3)=RAW1,(2)=RAW0
 	C_2HJ   <= W_3L_Y(1 downto 0);
 	C_2KL   <= W_3L_Y(1 downto 0);
-	W_RAW0  <= W_3L_Y(2);
-	W_RAW1  <= W_3L_Y(3);
+	W_RAW1  <= W_3L_Y(2);
+	W_RAW0  <= W_3L_Y(3);
 	W_SRCLK <= I_CLK_6M;
 
 --------  PARTS 2KL  ---------------------------------------------- 

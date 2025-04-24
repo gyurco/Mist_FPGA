@@ -101,7 +101,7 @@ begin
 		address_b => W_6M_DO(6 downto 2),
 		q_b       => W_COL_ROM_DO
 	);
-        W_COL_ROM_WR <= '1' when I_DL_WR = '1' and I_DL_ADDR(15 downto 5) = X"60"&"000" else '0'; -- 6000-601F
+	W_COL_ROM_WR <= '1' when I_DL_WR = '1' and I_DL_ADDR(15 downto 5) = X"60"&"000" else '0'; -- 6000-601F
 
 	---    VID OUT     --------------------------------------------------------
 	O_R <= W_COL_ROM_DO(2 downto 0);
