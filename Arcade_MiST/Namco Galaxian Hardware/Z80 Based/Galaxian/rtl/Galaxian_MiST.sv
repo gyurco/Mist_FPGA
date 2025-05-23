@@ -205,7 +205,7 @@ wire       rotate_filter = status[26];
 assign LED = 1;
 assign AUDIO_R = AUDIO_L;
 
-wire clk_24, clk_12, clk_6, clk_48;
+wire clk_24, clk_12, clk_6, clk_48, clk_18;
 wire pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
@@ -214,7 +214,8 @@ pll pll(
 	.c0(clk_48),
 	.c1(clk_24),
 	.c2(clk_12),
-	.c3(clk_6)
+	.c3(clk_6),
+	.c4(clk_18)
 	);
 assign SDRAM_CLK = clk_48;
 assign SDRAM_CKE = 1;
@@ -307,6 +308,7 @@ wire  [2:0] r,g,b;
 
 galaxian galaxian
 (
+	.W_CLK_18M(clk_18),
 	.W_CLK_12M(clk_12),
 	.W_CLK_6M(clk_6),
 	.I_RESET(status[0] | buttons[1]),

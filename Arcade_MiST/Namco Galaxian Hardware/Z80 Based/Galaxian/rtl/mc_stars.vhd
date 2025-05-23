@@ -18,8 +18,7 @@ library ieee;
 
 entity MC_STARS is
 	port (
-		I_CLK_12M     : in  std_logic;
-		I_CLK_6M      : in  std_logic;
+		I_CLK_18M     : in  std_logic;
 		I_H_FLIP      : in  std_logic;
 		I_V_SYNC      : in  std_logic;
 		I_8HF         : in  std_logic;
@@ -39,6 +38,8 @@ end;
 architecture RTL of MC_STARS is
 	signal CLK_1C           : std_logic := '0';
 	signal W_2D_Qn          : std_logic := '0';
+	signal CLK_6M           : std_logic := '0';
+	signal W_1D_Qn          : std_logic := '1';
 	
 	signal W_3B             : std_logic := '0';
 	signal noise            : std_logic := '0';
@@ -52,7 +53,7 @@ begin
 	O_G       <= (W_1AB_Q(11) & W_1AB_Q(10) ) when (W_2A = '0' and W_4P = '0') else (others => '0');
 	O_B       <= (W_1AB_Q(13) & W_1AB_Q(12) ) when (W_2A = '0' and W_4P = '0') else (others => '0');
 
-	CLK_1C    <= not (I_CLK_12M and (not I_CLK_6M )and (not I_V_SYNC) and I_256HnX);
+	CLK_1C    <= not (not I_CLK_18M and W_1D_Qn and (not I_V_SYNC) and I_256HnX);
 	CLK_1AB   <= not (CLK_1C or (not (I_H_FLIP or W_1C_Q(1))));
 	W_3B      <= W_2D_Qn xor W_1AB_Q(4);
 
@@ -60,6 +61,22 @@ begin
 	W_4P      <= not (( I_8HF xor I_1VF ) and W_2D_Qn and I_STARS_OFFn);
 
 	O_NOISE   <= noise ;
+
+	process(I_CLK_18M)
+	begin
+		if rising_edge(I_CLK_18M) then
+			if W_1D_Qn = '1' then
+				CLK_6M <= not CLK_6M;
+			else
+				CLK_6M <= '0';
+			end if;
+			if CLK_6M = '1' then
+				W_1D_Qn <= not W_1D_Qn;
+			else
+				W_1D_Qn <= '1';
+			end if;
+		end if;
+	end process;
 
 	process(I_2V)
 	begin

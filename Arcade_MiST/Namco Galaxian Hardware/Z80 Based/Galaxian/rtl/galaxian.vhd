@@ -27,6 +27,7 @@ library ieee;
 
 entity galaxian is
 	port(
+		W_CLK_18M  : in  std_logic;
 		W_CLK_12M  : in  std_logic;
 		W_CLK_6M   : in  std_logic;
 		I_RESET    : in  std_logic;
@@ -392,8 +393,7 @@ begin
 
 	mc_stars : entity work.MC_STARS
 	port map (
-		I_CLK_12M     => W_CLK_12M,
-		I_CLK_6M      => W_CLK_6M,
+		I_CLK_18M     => W_CLK_18M,
 		I_H_FLIP      => W_H_FLIP,
 		I_V_SYNC      => W_V_SYNC_int,
 		I_8HF         => W_8HF,
