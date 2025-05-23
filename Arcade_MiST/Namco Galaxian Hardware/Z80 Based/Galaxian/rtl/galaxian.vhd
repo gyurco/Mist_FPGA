@@ -28,7 +28,6 @@ library ieee;
 entity galaxian is
 	port(
 		W_CLK_18M  : in  std_logic;
-		W_CLK_12M  : in  std_logic;
 		W_CLK_6M   : in  std_logic;
 		I_RESET    : in  std_logic;
 		I_HWSEL    : in  integer;
@@ -196,7 +195,7 @@ begin
 
 	mc_vid : entity work.MC_VIDEO
 	port map(
-		I_CLK_12M     => W_CLK_12M,
+		I_CLK_18M     => W_CLK_18M,
 		I_CLK_6M      => W_CLK_6M,
 		I_HWSEL       => I_HWSEL,
 		I_H_CNT       => W_H_CNT,
@@ -268,7 +267,7 @@ begin
 
 	mc_cpu_ram : entity work.MC_CPU_RAM
 	port map (
-		I_CLK         => W_CLK_12M,
+		I_CLK         => W_CLK_18M,
 		I_CS          => W_CPU_RAM_CS,
 		I_ADDR        => W_A(9 downto 0),
 		I_D           => W_BDI,
@@ -282,7 +281,7 @@ begin
 
 	mc_adec : entity work.MC_ADEC
 	port map(
-		I_CLK_12M     => W_CLK_12M,
+		I_CLK_18M     => W_CLK_18M,
 		I_CLK_6M      => W_CLK_6M,
 		I_RSTn        => W_RESETn,
 		I_MOONCR      => W_MOONCR,
@@ -372,7 +371,7 @@ begin
 
 	mc_col_pal : entity work.MC_COL_PAL
 	port map(
-		I_CLK_12M     => W_CLK_12M,
+		I_CLK_18M     => W_CLK_18M,
 		I_CLK_6M      => W_CLK_6M,
 		I_VID         => W_VID,
 		I_COL         => W_COL,
@@ -410,7 +409,7 @@ begin
 
 	mc_sound_a : entity work.MC_SOUND_A
 	port map(
-		I_CLK_12M     => W_CLK_12M,
+		I_CLK_18M     => W_CLK_18M,
 		I_CLK_6M      => W_CLK_6M,
 		I_H_CNT1      => W_H_CNT(1),
 		I_BD          => W_BDI,
@@ -435,7 +434,7 @@ begin
 
 --	mc_roms : entity work.ROM_PGM_0
 --	port map (
---		CLK  => W_CLK_12M,
+--		CLK  => W_CLK_18M,
 --		ADDR => W_CPU_ROM_ADDR,
 --		DATA => W_CPU_ROM_DO
 --	);
@@ -443,12 +442,12 @@ begin
 	mc_roms : work.dpram generic map (14,8)
 	port map
 	(
-		clock_a   => W_CLK_12M,
+		clock_a   => W_CLK_18M,
 		wren_a    => W_CPU_ROM_WR,
 		address_a => I_DL_ADDR(13 downto 0),
 		data_a    => I_DL_DATA,
 
-		clock_b   => W_CLK_12M,
+		clock_b   => W_CLK_18M,
 		address_b => W_CPU_ROM_ADDR(13 downto 0),
 		q_b       => W_CPU_ROM_DO
 	);
@@ -514,7 +513,7 @@ begin
 	end process;
 
 -----  Parts 9L ---------
-	process(W_CLK_12M, I_RESET)
+	process(W_CLK_18M, I_RESET)
 	begin
 		if (I_RESET = '1') then
 			W_FS   <= (others=>'0');
@@ -522,7 +521,7 @@ begin
 			W_FIRE <= '0';
 			W_VOL1 <= '0';
 			W_VOL2 <= '0';
-		elsif rising_edge(W_CLK_12M) then
+		elsif rising_edge(W_CLK_18M) then
 			if (W_SOUND_WE = '1') then
 				case(W_A(2 downto 0)) is
 					when "000" => W_FS(0) <= W_BDI(0);
@@ -540,11 +539,11 @@ begin
 	end process;
 
 -----  Parts 9M ---------
-	process(W_CLK_12M, I_RESET)
+	process(W_CLK_18M, I_RESET)
 	begin
 		if (I_RESET = '1') then
 			W_DAC   <= (others=>'0');
-		elsif rising_edge(W_CLK_12M) then
+		elsif rising_edge(W_CLK_18M) then
 			if (W_DRIVER_WE = '1') then
 				case(W_A(2 downto 0)) is
 					-- next 4 outputs go off board via ULN2075 buffer
@@ -568,7 +567,7 @@ begin
 	speech : entity work.kb_synth
 	port map(
 		reset_n       => W_RESETn,
-		clk           => W_CLK_12M,
+		clk           => W_CLK_18M,
 		in0           => W_SPEECH_IN(0),
 		in1           => W_SPEECH_IN(1),
 		in2           => '0', -- GND

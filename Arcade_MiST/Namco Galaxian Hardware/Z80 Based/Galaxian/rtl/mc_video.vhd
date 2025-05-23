@@ -32,7 +32,7 @@ library ieee;
 
 entity MC_VIDEO is
 	port(
-		I_CLK_12M     : in  std_logic;
+		I_CLK_18M     : in  std_logic;
 		I_CLK_6M      : in  std_logic;
 		I_HWSEL       : in  integer;
 		I_H_CNT       : in  std_logic_vector(8 downto 0);
@@ -180,14 +180,14 @@ begin
 
 	obj_ram : entity work.MC_OBJ_RAM 
 	port map(
-		I_CLKA  => I_CLK_12M,
+		I_CLKA  => I_CLK_18M,
 		I_ADDRA => I_A(7 downto 0),
 		I_WEA   => I_OBJ_RAM_WR,
 		I_CEA   => I_OBJ_RAM_RQ,
 		I_DA    => I_BD,
 		O_DA    => W_OBJ_RAM_DOA,
 
-		I_CLKB  => I_CLK_12M,
+		I_CLKB  => I_CLK_18M,
 		I_ADDRB => W_OBJ_RAM_AB,
 		I_WEB   => '0',
 		I_CEB   => '1',
@@ -198,7 +198,7 @@ begin
 	lram : entity work.MC_LRAM
 	port map(
 		I_WCLK => I_CLK_6M,
-		I_RCLK => I_CLK_12M,
+		I_RCLK => I_CLK_18M,
 		I_ADDR => W_LRAM_A,
 		I_D    => W_LRAM_DI,
 		O_Dn   => W_LRAM_DO
@@ -217,14 +217,14 @@ begin
 
 	vid_ram : entity work.MC_VID_RAM
 	port map (
-		I_CLKA  => I_CLK_12M,
+		I_CLKA  => I_CLK_18M,
 		I_ADDRA => I_A(9 downto 0),
 		I_DA    => W_VID_RAM_DI,
 		I_WEA   => I_VID_RAM_WR,
 		I_CEA   => W_VID_RAM_CS,
 		O_DA    => W_VID_RAM_DOA,
 
-		I_CLKB  => I_CLK_12M,
+		I_CLKB  => I_CLK_18M,
 		I_ADDRB => W_VID_RAM_A(9 downto 0),
 		I_DB    => x"00",
 		I_WEB   => '0',
@@ -235,19 +235,19 @@ begin
 	-- 1K VID-Rom
 --	k_rom : entity work.ROM_1K
 --	port map (
---		CLK  => I_CLK_12M,
+--		CLK  => I_CLK_18M,
 --		ADDR => W_O_OBJ_ROM_A,
 --		DATA => W_1K_D
 --	);
 	k_rom : work.dpram generic map (12,8)
 	port map
 	(
-		clock_a   => I_CLK_12M,
+		clock_a   => I_CLK_18M,
 		wren_a    => W_K_ROM_WR,
 		address_a => I_DL_ADDR(11 downto 0),
 		data_a    => I_DL_DATA,
 
-		clock_b   => I_CLK_12M,
+		clock_b   => I_CLK_18M,
 		address_b => W_O_OBJ_ROM_A,
 		q_b       => W_1K_D
 	);
@@ -257,7 +257,7 @@ begin
 	-- 1H VID-Rom
 --	h_rom : entity work.ROM_1H
 --	port map(
---		CLK  => I_CLK_12M,
+--		CLK  => I_CLK_18M,
 --		ADDR => W_O_OBJ_ROM_A,
 --		DATA => W_1H_D
 --	);
@@ -265,12 +265,12 @@ begin
 	h_rom : work.dpram generic map (12,8)
 	port map
 	(
-		clock_a   => I_CLK_12M,
+		clock_a   => I_CLK_18M,
 		wren_a    => W_H_ROM_WR,
 		address_a => I_DL_ADDR(11 downto 0),
 		data_a    => I_DL_DATA,
 
-		clock_b   => I_CLK_12M,
+		clock_b   => I_CLK_18M,
 		address_b => W_O_OBJ_ROM_A,
 		q_b       => W_1H_D
 	);
@@ -279,9 +279,9 @@ begin
 
 -----------------------------------------------------------------------------------
 
-	process(I_CLK_12M)
+	process(I_CLK_18M)
 	begin
-		if falling_edge(I_CLK_12M) then
+		if falling_edge(I_CLK_18M) then
 			W_LDn       <= WB_LDn;
 			W_CNTRLDn   <= WB_CNTRLDn;
 			W_CNTRCLRn  <= WB_CNTRCLRn;
@@ -310,9 +310,9 @@ begin
 	W_OBJ_RAM_AB <= "0" & I_H_CNT(8) & W_6J_Q(2) & W_HF_CNT(6 downto 4) & W_6J_Q(1 downto 0);
 --	W_OBJ_RAM_A  <= W_OBJ_RAM_AB when I_OBJ_RAM_RQ = '0' else I_A(7 downto 0) ;
 
-	process(I_CLK_12M)
+	process(I_CLK_18M)
 	begin
-		if rising_edge(I_CLK_12M) then
+		if rising_edge(I_CLK_18M) then
 			W_H_POSI <= W_OBJ_RAM_DOB;
 		end if;
 	end process;
@@ -340,9 +340,9 @@ begin
 		end if;
 	end process;
 
-	process(I_CLK_12M)
+	process(I_CLK_18M)
 	begin
-		if rising_edge(I_CLK_12M) then
+		if rising_edge(I_CLK_18M) then
 			if I_DRIVER_WR = '1' and I_A(2) = '0' then
 				bank(to_integer(unsigned(I_A(1 downto 0)))) <= I_BD;
 			end if;

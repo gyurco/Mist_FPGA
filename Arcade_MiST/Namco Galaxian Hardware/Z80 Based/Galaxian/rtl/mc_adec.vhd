@@ -55,7 +55,7 @@ library ieee;
 
 entity MC_ADEC is
 	port (
-		I_CLK_12M     : in  std_logic;
+		I_CLK_18M     : in  std_logic;
 		I_CLK_6M      : in  std_logic;
 		I_RSTn        : in  std_logic;
 		I_MOONCR      : in  std_logic;
@@ -230,11 +230,11 @@ begin
 
 	-----  Parts 9N ---------
 
-	process(I_CLK_12M, I_RSTn)
+	process(I_CLK_18M, I_RSTn)
 	begin
 		if (I_RSTn = '0') then
 			W_9N_Q <= (others => '0');
-		elsif rising_edge(I_CLK_12M) then
+		elsif rising_edge(I_CLK_18M) then
 			if (W_8M_Q(6) = '0') then
 				case I_CPU_A(2 downto 0) is
 					when "000"  => W_9N_Q(0) <= I_CPU_D;

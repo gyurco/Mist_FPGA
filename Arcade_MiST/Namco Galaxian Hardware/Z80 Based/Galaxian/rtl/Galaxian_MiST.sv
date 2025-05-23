@@ -205,7 +205,7 @@ wire       rotate_filter = status[26];
 assign LED = 1;
 assign AUDIO_R = AUDIO_L;
 
-wire clk_24, clk_12, clk_6, clk_48, clk_18;
+wire clk_24, clk_6, clk_48, clk_18;
 wire pll_locked;
 pll pll(
 	.inclk0(CLOCK_27),
@@ -213,9 +213,8 @@ pll pll(
 	.locked(pll_locked),
 	.c0(clk_48),
 	.c1(clk_24),
-	.c2(clk_12),
-	.c3(clk_6),
-	.c4(clk_18)
+	.c2(clk_18),
+	.c3(clk_6)
 	);
 assign SDRAM_CLK = clk_48;
 assign SDRAM_CKE = 1;
@@ -245,7 +244,7 @@ user_io #(
 	.STRLEN(($size(CONF_STR)>>3)),
 	.FEATURES(32'h0 | (BIG_OSD << 13) | (HDMI << 14)))
 user_io(
-	.clk_sys        (clk_12         ),
+	.clk_sys        (clk_18         ),
 	.conf_str       (CONF_STR       ),
 	.SPI_CLK        (SPI_SCK        ),
 	.SPI_SS_IO      (CONF_DATA0     ),
@@ -289,7 +288,7 @@ wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
 
 data_io data_io(
-	.clk_sys       ( clk_12       ),
+	.clk_sys       ( clk_18       ),
 	.SPI_SCK       ( SPI_SCK      ),
 	.SPI_SS2       ( SPI_SS2      ),
 	.SPI_DI        ( SPI_DI       ),
@@ -309,7 +308,6 @@ wire  [2:0] r,g,b;
 galaxian galaxian
 (
 	.W_CLK_18M(clk_18),
-	.W_CLK_12M(clk_12),
 	.W_CLK_6M(clk_6),
 	.I_RESET(status[0] | buttons[1]),
 	.I_HWSEL(core_mod),
@@ -390,8 +388,8 @@ mist_dual_video #(.COLOR_DEPTH(3),.OUT_COLOR_DEPTH(VGA_BITS),.SD_HCNT_WIDTH(10),
 
 `ifdef USE_HDMI
 
-i2c_master #(12_000_000) i2c_master (
-	.CLK         (clk_12),
+i2c_master #(18_000_000) i2c_master (
+	.CLK         (clk_18),
 
 	.I2C_START   (i2c_start),
 	.I2C_READ    (i2c_read),
@@ -453,7 +451,7 @@ wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, 
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 
 arcade_inputs #(.START1(10), .START2(12), .COIN1(11)) inputs (
-	.clk         ( clk_12      ),
+	.clk         ( clk_18      ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
 	.key_code    ( key_code    ),

@@ -49,7 +49,7 @@ begin
 	          buf_do when buf_ce_n = '0' else
 	         "00000000";
 
-	-- clk/5 = 12MHz/5 = 2.4MHz (originally 5MHz/2)
+	-- clk/7 = 18MHz/7 = 2.57MHz (originally 5MHz/2)
 	process(clk, reset_n)
 	begin
 		if reset_n = '0' then
@@ -58,7 +58,7 @@ begin
 		elsif rising_edge(clk) then
 			cpu_ce_cnt <= cpu_ce_cnt + 1;
 			cpu_ce <= '0';
-			if cpu_ce_cnt = 4 then
+			if cpu_ce_cnt = 6 then
 				cpu_ce <= '1';
 				cpu_ce_cnt <= (others => '0');
 			end if;

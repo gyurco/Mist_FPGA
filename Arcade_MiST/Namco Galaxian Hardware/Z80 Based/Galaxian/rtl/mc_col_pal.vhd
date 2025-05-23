@@ -23,7 +23,7 @@ library ieee;
 
 entity MC_COL_PAL is
 port (
-	I_CLK_12M    : in  std_logic;
+	I_CLK_18M    : in  std_logic;
 	I_CLK_6M     : in  std_logic;
 	I_VID        : in  std_logic_vector(1 downto 0);
 	I_COL        : in  std_logic_vector(2 downto 0);
@@ -84,7 +84,7 @@ begin
 
 --	clut : entity work.ROM_6L
 --	port map (
---		CLK  => I_CLK_12M,
+--		CLK  => I_CLK_18M,
 --		ADDR => W_6M_DO(6 downto 2),
 --		DATA => W_COL_ROM_DO
 --	);
@@ -92,12 +92,12 @@ begin
 	clut : work.dpram generic map (5,8)
 	port map
 	(
-		clock_a   => I_CLK_12M,
+		clock_a   => I_CLK_18M,
 		wren_a    => W_COL_ROM_WR,
 		address_a => I_DL_ADDR(4 downto 0),
 		data_a    => I_DL_DATA,
 
-		clock_b   => I_CLK_12M,
+		clock_b   => I_CLK_18M,
 		address_b => W_6M_DO(6 downto 2),
 		q_b       => W_COL_ROM_DO
 	);

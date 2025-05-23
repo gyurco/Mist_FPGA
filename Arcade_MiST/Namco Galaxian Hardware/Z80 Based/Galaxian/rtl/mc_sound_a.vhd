@@ -20,7 +20,7 @@ library ieee;
 
 entity MC_SOUND_A is
 port (
-	I_CLK_12M  : in   std_logic;
+	I_CLK_18M  : in   std_logic;
 	I_CLK_6M   : in   std_logic;
 	I_H_CNT1   : in   std_logic;
 	I_BD       : in   std_logic_vector(7 downto 0);
@@ -46,9 +46,9 @@ architecture RTL of MC_SOUND_A is
 begin
 	O_DO <= W_6T_Q;
 
-	process (I_CLK_12M)
+	process (I_CLK_18M)
 	begin
-		if rising_edge(I_CLK_12M)  then
+		if rising_edge(I_CLK_18M)  then
 			W_PITCH  <= I_PITCH;
 			if (W_89K_Q = x"ff") then
 				W_89K_LDn <= '0' ;
