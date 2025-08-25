@@ -121,13 +121,6 @@ set_multicycle_path -to {VGA_*[*]} -hold 2
 
 set_multicycle_path -from [get_clocks $sdram_clk] -to [get_clocks $mem_clk] -setup 2
 
-set_multicycle_path -from {m92:m92|v30:v30|*} -to {m92:m92|v30:v30|regs.*} -setup 2
-set_multicycle_path -from {m92:m92|v30:v30|*} -to {m92:m92|v30:v30|regs.*} -hold 1
-set_multicycle_path -from {m92:m92|v30:v30|*} -to {m92:m92|v30:v30|bus_datawrite[*]} -setup 2
-set_multicycle_path -from {m92:m92|v30:v30|*} -to {m92:m92|v30:v30|bus_datawrite[*]} -hold 1
-set_multicycle_path -from {m92:m92|v30:v30|*} -to {m92:m92|v30:v30|bus_addr[*]} -setup 2
-set_multicycle_path -from {m92:m92|v30:v30|*} -to {m92:m92|v30:v30|bus_addr[*]} -hold 1
-
 set_multicycle_path -from {m92:m92|sound:sound|v35:v35|v30:core|*} -to {m92:m92|sound:sound|v35:v35|v30:core|regs.*} -setup 2
 set_multicycle_path -from {m92:m92|sound:sound|v35:v35|v30:core|*} -to {m92:m92|sound:sound|v35:v35|v30:core|regs.*} -hold 1
 set_multicycle_path -from {m92:m92|sound:sound|v35:v35|v30:core|*} -to {m92:m92|sound:sound|v35:v35|v30:core|bus_datawrite[*]} -setup 2

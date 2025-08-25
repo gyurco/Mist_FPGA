@@ -218,7 +218,7 @@ pll_mist pll(
 	);
 
 `ifdef DUAL_SDRAM
-wire pll2_locked;
+wire pll2_locked, CLK2_80M;
 pll_rot pll_rot(
 	.inclk0(CLOCK_27),
 	.c0(CLK2_80M), // 80 MHz
@@ -398,7 +398,7 @@ sdram_4w_cl3 #(120) sdram
   .port1_we      ( sdr_rom_write ),
   .port1_ds      ( sdr_rom_be    ),
   .port1_d       ( sdr_rom_data  ),
-  .port1_q       ( sdr_rom_ack   ),
+  .port1_q       (               ),
 
   // Main CPU
   .cpu1_rom_addr ( ),
@@ -432,11 +432,11 @@ sdram_4w_cl3 #(120) sdram
   // Bank 2-3 ops
   .port2_a       ( sdr_rom_addr[24:1] ),
   .port2_req     ( sdr_rom_req     ),
-  .port2_ack     ( sdr_rom_ack     ),
+  .port2_ack     (                 ),
   .port2_we      ( sdr_rom_write   ),
   .port2_ds      ( sdr_rom_be      ),
   .port2_d       ( sdr_rom_data    ),
-  .port2_q       ( sdr_rom_ack     ),
+  .port2_q       (                 ),
 
   .gfx1_req      ( sdr_bg_req_a    ),
   .gfx1_ack      ( sdr_bg_ack_a    ),
