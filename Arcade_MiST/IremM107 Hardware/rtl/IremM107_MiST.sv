@@ -198,7 +198,7 @@ wire        rotate_filter = status[14];
 
 `ifdef ENABLE_FILTERS
 wire        blend   = status[7];
-wire        filters = ~status[14];
+wire        filters = ~status[15];
 `else
 wire        blend   = 0;
 wire        filters = 0;
