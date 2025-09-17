@@ -1057,19 +1057,6 @@ wire [22:0] scp_rom_address;
 
 assign sdr_scp_addr = SCN1_ROM_SDR_BASE[26:0] + { 4'b0, scp_rom_address[22:0] };
 
-logic [15:0] sync_xofs;
-logic [15:0] sync_yofs;
-
-always_comb begin
-    case (game)
-        GAME_DEADCONXJ: begin sync_xofs = -11; sync_yofs = -17; end
-        GAME_DEADCONX:  begin sync_xofs = -33; sync_yofs = -30; end
-        GAME_METALB:    begin sync_xofs = -11; sync_yofs = -18; end
-        default: begin sync_xofs = 0; sync_yofs = 0; end
-    endcase
-end
-
-
 TC0480SCP #(.SS_IDX(SSIDX_480SCP)) tc0480scp(
     .clk(clk),
     .ce(ce_pixel), // FIXME: scn0 should be authorative here
@@ -1100,7 +1087,7 @@ TC0480SCP #(.SS_IDX(SSIDX_480SCP)) tc0480scp(
     .rom_ack(sdr_scn_mux_ack),
     .rom_data(sdr_scn_mux_q),
 
-    .devils_bit(game == GAME_METALB),
+    .devils_bit(game == GAME_METALB || game == GAME_METALBA),
 
     // Video interface
     .SD(scp_dot_color),
@@ -1112,9 +1099,6 @@ TC0480SCP #(.SS_IDX(SSIDX_480SCP)) tc0480scp(
     .VLDn(),
     .OUHLDn(global_hcnt != cfg_hofs_480scp),
     .OUVLDn(global_vcnt != cfg_vofs_480scp),
-
-    .sync_xofs,
-    .sync_yofs,
 
     .ssbus(ssb[18])
 );
@@ -1279,7 +1263,7 @@ logic [14:0] color0_pri, color1_pri, color2_pri;
 always_comb begin
     color1_pri = {obj_dot[11:10], 1'b0, obj_dot[11:0]};
     if (cfg_480scp) begin
-        if (game == GAME_METALB) begin
+        if (game == GAME_METALB || game == GAME_METALBA) begin
             color0_pri = {{scp_dot_color[14], scp_dot_color[13]} - 2'b01, scp_dot_color[12:0]};
             if (scp_dot_color[15:13] == 3'b101)
                 color2_pri = {2'b10, scp_dot_color[12:0]};

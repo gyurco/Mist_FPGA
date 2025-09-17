@@ -1,40 +1,43 @@
 module tc0100scn_shifter #(
-    parameter PALETTE_WIDTH=8,
-    parameter PIXEL_WIDTH=4)
+    parameter TILE_WIDTH=8,
+    parameter LENGTH=4
+    )
 (
-    input clk,
-    input ce_pixel,
-    input load,
+    input                                         clk,
+    input                                         ce,
 
-    input [2:0] tap,
-    input [(PIXEL_WIDTH * 8) - 1:0] gfx_in,
-    input [PALETTE_WIDTH - 1:0] palette_in,
-    input flip_x,
-    output [PIXEL_WIDTH + PALETTE_WIDTH - 1:0] dot_out
+    input                                         load,
+    input [$clog2(LENGTH)-1:0]                    load_index,
+    input [7:0]                                   load_color,
+    input [(TILE_WIDTH*4)-1:0]                    load_data,
+    input                                         load_flip,
+
+    input [$clog2(LENGTH)+$clog2(TILE_WIDTH)-1:0] tap,
+    output reg [11:0]                             dot_out
 );
 
-localparam DOT_WIDTH = (PALETTE_WIDTH + PIXEL_WIDTH);
-localparam SHIFT_END = (DOT_WIDTH * 16) - 1;
+reg [7:0] color_buf[LENGTH];
+reg [(TILE_WIDTH*4)-1:0] pixel_buf[LENGTH];
 
-reg [SHIFT_END:0] shift;
-
-assign dot_out = shift[(SHIFT_END - (DOT_WIDTH * tap)) -: DOT_WIDTH];
+wire [$clog2(LENGTH)-1:0] tap_index = tap[$left(tap):$clog2(TILE_WIDTH)];
+wire [$clog2(TILE_WIDTH)-1:0] tap_pixel = tap[$clog2(TILE_WIDTH)-1:0];
 
 always_ff @(posedge clk) begin
-    if (ce_pixel) begin
-        shift[SHIFT_END:DOT_WIDTH] <= shift[SHIFT_END-DOT_WIDTH:0];
-        if (load) begin
+    if (load) begin
+
+        color_buf[load_index] <= load_color;
+        if (~load_flip) begin
             int i;
-            if (flip_x) begin
-                for( i = 0; i < 8; i = i + 1 ) begin
-                    shift[(DOT_WIDTH * (7 - i)) +: DOT_WIDTH] <= { palette_in, gfx_in[(PIXEL_WIDTH * i) +: PIXEL_WIDTH] };
-                end
-            end else begin
-                for( i = 0; i < 8; i = i + 1 ) begin
-                    shift[(DOT_WIDTH * i) +: DOT_WIDTH] <= { palette_in, gfx_in[(PIXEL_WIDTH * i) +: PIXEL_WIDTH] };
-                end
+            for( i = 0; i < TILE_WIDTH; i = i + 1 ) begin
+                pixel_buf[load_index][(4 * ((TILE_WIDTH-1) - i)) +: 4] <= load_data[(4 * i) +: 4];
             end
+        end else begin
+            pixel_buf[load_index] <= load_data;
         end
+    end
+
+    if (ce) begin
+        dot_out <= { color_buf[tap_index], pixel_buf[tap_index][(4 * tap_pixel) +: 4] };
     end
 end
 
@@ -92,19 +95,19 @@ typedef enum bit [3:0]
     BG0_ROW_SCROLL = 4'd0,
     BG0_ATTRIB1_EX,
     BG1_COL_SCROLL_EX,
-    FG0_GFX_EX,
+    FG0_ATTRIB_EX,
     BG1_ROW_SCROLL,
     BG1_ATTRIB1_EX,
-    FG0_ATTRIB_EX,
+    FG0_GFX_EX,
     CPU_ACCESS_EX,
 
     BG0_ATTRIB0,
     BG0_ATTRIB1,
     BG1_COL_SCROLL,
-    FG0_GFX,
+    FG0_ATTRIB,
     BG1_ATTRIB0,
     BG1_ATTRIB1,
-    FG0_ATTRIB,
+    FG0_GFX,
     CPU_ACCESS
 } access_state_t;
 
@@ -123,9 +126,9 @@ reg [15:0] ctrl[8];
 
 wire [15:0] bg0_x = ctrl[0];
 wire [15:0] bg1_x = ctrl[1];
-wire [15:0] fg0_x = ctrl[2];
+wire [15:0] fg0_x = flip ? (ctrl[2] - 15'd7) : ctrl[2];
 wire [15:0] bg0_y = ctrl[3];
-wire [15:0] bg1_y = ctrl[4];
+wire [15:0] bg1_y = ctrl[4] + bg1_colscroll[15:0];
 wire [15:0] fg0_y = ctrl[5];
 wire bg0_en = ~ctrl[6][0];
 wire bg1_en = ~ctrl[6][1];
@@ -135,7 +138,7 @@ wire wide = ctrl[6][4];
 wire flip = ctrl[7][0];
 
 wire [8:0] vcnt = flip ? { 9'd255 - vcnt_actual } : vcnt_actual;
-wire [8:0] hcnt = flip ? { 9'd343 - hcnt_actual } : hcnt_actual;
+wire [8:0] hcnt = flip ? { 9'd351 - hcnt_actual } : hcnt_actual;
 
 assign DACKn = SCCSn ? 0 : dtack_n;
 assign SA = ram_addr[15:1];
@@ -170,7 +173,7 @@ always @(posedge clk) begin
         hcnt_actual <= hcnt_actual + 1;
 
         if (IHLD & ~prev_ihld) begin /* 424 * 2 - 1 */
-            hcnt_actual <= 0;
+            hcnt_actual <= 504;
             vcnt_actual <= vcnt_actual + 1;
             if (IVLD) begin
                 vcnt_actual <= 0;
@@ -185,14 +188,19 @@ logic [3:0] next_access_cycle;
 
 wire [8:0] bg0_hofs = bg0_x[8:0] + bg0_rowscroll[8:0];
 wire [8:0] bg1_hofs = bg1_x[8:0] + bg1_rowscroll[8:0];
-reg [31:0] bg0_gfx;
-wire [31:0] bg1_gfx = rom_data;
 wire [11:0] bg0_dot, bg1_dot, fg0_dot;
 reg [15:0] bg0_rowscroll, bg1_rowscroll;
 reg [15:0] bg1_colscroll;
 reg [15:0] bg0_code, bg1_code;
 reg [15:0] bg0_attrib, bg1_attrib;
-reg [15:0] fg0_code, fg0_gfx, fg0_code_next;
+reg [15:0] bg0_attrib_next, bg1_attrib_next;
+reg [15:0] fg0_code, fg0_gfx;
+
+reg bg0_load, bg1_load;
+reg bg0_rom_req, bg1_rom_req;
+reg [20:0] bg0_rom_address, bg1_rom_address;
+
+reg [1:0] rom_req_ch;
 
 wire bg0_flipx = bg0_attrib[14];
 wire bg0_flipy = bg0_attrib[15];
@@ -200,8 +208,6 @@ wire bg1_flipx = bg1_attrib[14];
 wire bg1_flipy = bg1_attrib[15];
 wire fg0_flipx = fg0_code[14];
 wire fg0_flipy = fg0_code[15];
-
-
 
 wire [31:0] fg0_gfx_swizzle = { 2'b0, fg0_gfx[15], fg0_gfx[7],
                                 2'b0, fg0_gfx[14], fg0_gfx[6],
@@ -212,32 +218,42 @@ wire [31:0] fg0_gfx_swizzle = { 2'b0, fg0_gfx[15], fg0_gfx[7],
                                 2'b0, fg0_gfx[ 9], fg0_gfx[1],
                                 2'b0, fg0_gfx[ 8], fg0_gfx[0] };
 
+wire [8:0] bg0_draw_hcnt = (hcnt - bg0_hofs);
+wire [8:0] bg1_draw_hcnt = (hcnt - bg1_hofs);
+wire [8:0] fg0_draw_hcnt = (hcnt - fg0_x[8:0]);
+
+reg [1:0] bg0_load_index, bg1_load_index;
+reg [8:0] bg0_load_hcnt, bg1_load_hcnt, fg0_load_hcnt;
+
 tc0100scn_shifter bg0_shift(
-    .clk, .ce_pixel,
-    .tap(flip ? bg0_hofs[2:0] : ~bg0_hofs[2:0]),
-    .gfx_in({bg0_gfx[15:8], bg0_gfx[7:0], bg0_gfx[31:24], bg0_gfx[23:16]}),
-    .palette_in(bg0_attrib[7:0]),
-    .flip_x(bg0_flipx ^ flip),
+    .clk, .ce(ce_pixel),
+    .tap(bg0_draw_hcnt[4:0]),
+    .load_index(bg0_load_index),
+    .load_data({rom_data[15:8], rom_data[7:0], rom_data[31:24], rom_data[23:16]}),
+    .load_color(bg0_attrib[7:0]),
+    .load_flip(bg0_flipx),
     .dot_out(bg0_dot),
-    .load(&access_cycle[2:0])
+    .load(bg0_load)
 );
 
 tc0100scn_shifter bg1_shift(
-    .clk, .ce_pixel,
-    .tap(flip ? bg1_hofs[2:0] : ~bg1_hofs[2:0]),
-    .gfx_in({bg1_gfx[15:8], bg1_gfx[7:0], bg1_gfx[31:24], bg1_gfx[23:16]}),
-    .palette_in(bg1_attrib[7:0]),
-    .flip_x(bg1_flipx ^ flip),
+    .clk, .ce(ce_pixel),
+    .tap(bg1_draw_hcnt[4:0]),
+    .load_index(bg1_load_index),
+    .load_data({rom_data[15:8], rom_data[7:0], rom_data[31:24], rom_data[23:16]}),
+    .load_color(bg1_attrib[7:0]),
+    .load_flip(bg1_flipx),
     .dot_out(bg1_dot),
-    .load(&access_cycle[2:0])
+    .load(bg1_load)
 );
 
 tc0100scn_shifter fg0_shift(
-    .clk, .ce_pixel,
-    .tap(flip ? fg0_x[2:0] : ~fg0_x[2:0]),
-    .gfx_in(fg0_gfx_swizzle),
-    .palette_in({2'b0, fg0_code[13:8]}),
-    .flip_x(fg0_flipx ^ flip),
+    .clk, .ce(ce_pixel),
+    .tap(fg0_draw_hcnt[4:0]),
+    .load_index(fg0_load_hcnt[4:3]),
+    .load_data(fg0_gfx_swizzle),
+    .load_color({2'b0, fg0_code[13:8]}),
+    .load_flip(fg0_flipx),
     .dot_out(fg0_dot),
     .load(&access_cycle[2:0])
 );
@@ -258,7 +274,6 @@ always_comb begin
     WEUPn = 1;
     WELOn = 1;
 
-    h = 0;
     v = 0;
 
     if (access_cycle == 15) begin
@@ -269,41 +284,36 @@ always_comb begin
 
     unique case(access_cycle)
         BG0_ATTRIB0: begin
-            h = hcnt[8:3] - bg0_hofs[8:3];
             v = vcnt - bg0_y[8:0];
-            ram_addr = bg0_addr + { 3'b0, v[8:3], h, 2'b00 };
+            ram_addr = bg0_addr + { 3'b0, v[8:3], bg0_load_hcnt[8:3], 2'b00 };
         end
 
         BG0_ATTRIB1_EX,
         BG0_ATTRIB1: begin
-            h = hcnt[8:3] - bg0_hofs[8:3];
             v = vcnt - bg0_y[8:0];
-            ram_addr = bg0_addr + { 3'b0, v[8:3], h, 2'b10 };
+            ram_addr = bg0_addr + { 3'b0, v[8:3], bg0_load_hcnt[8:3], 2'b10 };
         end
 
         BG1_ATTRIB0: begin
-            h = hcnt[8:3] - bg1_hofs[8:3];
             v = vcnt - bg1_y[8:0];
-            ram_addr = bg1_addr + { 3'b0, v[8:3], h, 2'b00 };
+            ram_addr = bg1_addr + { 3'b0, v[8:3], bg1_load_hcnt[8:3], 2'b00 };
         end
 
         BG1_ATTRIB1_EX,
         BG1_ATTRIB1: begin
-            h = hcnt[8:3] - bg1_hofs[8:3];
             v = vcnt - bg1_y[8:0];
-            ram_addr = bg1_addr + { 3'b0, v[8:3], h, 2'b10 };
+            ram_addr = bg1_addr + { 3'b0, v[8:3], bg1_load_hcnt[8:3], 2'b10 };
         end
 
         BG1_COL_SCROLL_EX,
         BG1_COL_SCROLL: begin
-            ram_addr = bg1_col_scroll_addr + { 10'b0, hcnt[8:3], 1'b0 };
+            ram_addr = bg1_col_scroll_addr + { 10'b0, bg1_load_hcnt[8:3], 1'b0 };
         end
 
         FG0_ATTRIB_EX,
         FG0_ATTRIB: begin
-            h = hcnt[8:3] - fg0_x[8:3];
             v = vcnt - fg0_y[8:0];
-            ram_addr = fg0_addr + { 4'b0, v[8:3], h + (flip ? 6'd0 : 6'd1), 1'b0 };
+            ram_addr = fg0_addr + { 4'b0, v[8:3], fg0_load_hcnt[8:3], 1'b0 };
         end
 
         FG0_GFX_EX,
@@ -359,36 +369,38 @@ always @(posedge clk) begin
         end
 
         if (ce_pixel) begin
+            bg0_load <= 0;
+            bg1_load <= 0;
             unique case(access_cycle)
                 BG0_ROW_SCROLL: bg0_rowscroll <= SDin;
-                BG0_ATTRIB0: bg0_attrib <= SDin;
+                BG0_ATTRIB0: bg0_attrib_next <= SDin;
                 BG0_ATTRIB1_EX,
                 BG0_ATTRIB1: begin
                     bg0_code <= SDin;
                     v = vcnt - bg0_y[8:0];
-                    rom_address <= { SDin, bg0_flipy ? ~v[2:0] : v[2:0], 2'b0 };
-                    rom_req <= ~rom_req;
+                    bg0_rom_address <= { SDin, bg0_flipy ? ~v[2:0] : v[2:0], 2'b0 };
+                    bg0_load_index <= bg0_load_hcnt[4:3];
+                    bg0_rom_req <= 1;
                 end
 
                 BG1_ROW_SCROLL: bg1_rowscroll <= SDin;
-                BG1_ATTRIB0: bg1_attrib <= SDin;
+                BG1_ATTRIB0: bg1_attrib_next <= SDin;
                 BG1_ATTRIB1_EX,
                 BG1_ATTRIB1: begin
-                    bg0_gfx <= rom_data;
                     bg1_code <= SDin;
                     v = vcnt - bg1_y[8:0];
-                    rom_address <= { SDin, bg1_flipy ? ~v[2:0] : v[2:0], 2'b0 };
-                    rom_req <= ~rom_req;
+                    bg1_rom_address <= { SDin, bg1_flipy ? ~v[2:0] : v[2:0], 2'b0 };
+                    bg1_load_index <= bg1_load_hcnt[4:3];
+                    bg1_rom_req <= 1;
                 end
 
                 BG1_COL_SCROLL_EX,
                 BG1_COL_SCROLL: begin
                     bg1_colscroll <= SDin;
-                    fg0_code <= fg0_code_next;
                 end
 
                 FG0_ATTRIB_EX,
-                FG0_ATTRIB: fg0_code_next <= SDin;
+                FG0_ATTRIB: fg0_code <= SDin;
 
                 FG0_GFX_EX,
                 FG0_GFX: fg0_gfx <= SDin;
@@ -414,9 +426,39 @@ always @(posedge clk) begin
                         ram_access <= ram_pending;
                     end
 
+                    BG0_ATTRIB0: begin
+                        bg0_load_hcnt <= flip ? ((hcnt - 9'd16) - bg0_hofs) : ((hcnt + 9'd16) - bg0_hofs);
+                        bg1_load_hcnt <= flip ? ((hcnt - 9'd16) - bg1_hofs) : ((hcnt + 9'd16) - bg1_hofs);
+                        fg0_load_hcnt <= flip ? ((hcnt - 9'd16) - fg0_x[8:0]) : ((hcnt + 9'd16) - fg0_x[8:0]);
+                    end
+
                     default: begin
                     end
                 endcase
+            end
+        end // ce_pixel
+
+        if (rom_req == rom_ack) begin
+            if (rom_req_ch == 1) begin
+                bg0_load <= 1;
+                rom_req_ch <= 0;
+            end else if (rom_req_ch == 2) begin
+                bg1_load <= 1;
+                rom_req_ch <= 0;
+            end else begin
+                if (bg0_rom_req) begin
+                    bg0_attrib <= bg0_attrib_next;
+                    rom_address <= bg0_rom_address;
+                    rom_req <= ~rom_req;
+                    rom_req_ch <= 1;
+                    bg0_rom_req <= 0;
+                end else if (bg1_rom_req) begin
+                    bg1_attrib <= bg1_attrib_next;
+                    rom_address <= bg1_rom_address;
+                    rom_req <= ~rom_req;
+                    rom_req_ch <= 2;
+                    bg1_rom_req <= 0;
+                end
             end
         end
     end

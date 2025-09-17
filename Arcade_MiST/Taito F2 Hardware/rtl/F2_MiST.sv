@@ -155,6 +155,8 @@ localparam CONF_STR = {
 	"O6,Swap Joystick,Off,On;",
 	"O7,Blending,Off,On;",
 	"O8,Pause,Off,On;",
+	"O9B,Rotary Sensitivity,100%,50%,25%,12%,6%,200%,150%,125%;",
+	"OC,Rotary Invert,No,Yes;",
 	`SEP
 	"DIP;",
 	`SEP
@@ -166,11 +168,12 @@ wire        rotate    = status[3];
 wire  [1:0] scanlines = status[5:4];
 wire        joyswap   = status[6];
 wire        system_pause = status[8];
-wire  [1:0] orientation = {flipped, core_mod[0]};
 reg         oneplayer = 0;
 wire  [7:0] dswa = ~status[23:16];
 wire  [7:0] dswb = ~status[31:24];
 wire        blend   = status[7];
+wire  [2:0] analog_sens = status[11:9];
+wire        analog_invert = status[12];
 
 assign LED = ~ioctl_downl;
 assign SDRAM_CKE = 1; 
@@ -201,6 +204,8 @@ wire [15:0] joystick_0;
 wire [15:0] joystick_1;
 wire [15:0] joystick_2;
 wire [15:0] joystick_3;
+wire [31:0] joystick_analog_0;
+wire [31:0] joystick_analog_1;
 wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
@@ -248,6 +253,8 @@ user_io(
 	.joystick_1     (joystick_1     ),
 	.joystick_2     (joystick_2     ),
 	.joystick_3     (joystick_3     ),
+	.joystick_analog_0(joystick_analog_0),
+	.joystick_analog_1(joystick_analog_1),
 	.status         (status         ),
 `ifdef USE_HDMI
 	.i2c_start      (i2c_start      ),
@@ -483,6 +490,27 @@ coin_pulse cp1(.clk(clk_sys), .vblank(VBlank), .button(m_coin2), .pulse(coin[1])
 coin_pulse cp2(.clk(clk_sys), .vblank(VBlank), .button(m_coin3), .pulse(coin[2]));
 coin_pulse cp3(.clk(clk_sys), .vblank(VBlank), .button(m_coin4), .pulse(coin[3]));
 
+function bit [7:0] sens(input [7:0] d);
+    bit [7:0] r;
+    unique case (analog_sens)
+        3'b000: r = d;
+        3'b001: r = {d[7], d[7:1]};
+        3'b010: r = {d[7], d[7], d[7:2]};
+        3'b011: r = {d[7], d[7], d[7], d[7:3]};
+        3'b100: r = {d[7], d[7], d[7], d[7], d[7:4]};
+        3'b101: r = d + d;
+        3'b110: r = d + { d[7], d[7:1] };
+        3'b111: r = d + { d[7], d[7], d[7:2] };
+    endcase
+    return analog_invert ? (r ? ~r : r) : r;
+endfunction
+
+wire [7:0] analog_p1 = joyswap ? joystick_analog_1[15:8] : joystick_analog_0[15:8];
+wire [7:0] analog_p2 = joyswap ? joystick_analog_0[15:8] : joystick_analog_1[15:8];
+
+wire       vertical = board_cfg.game == GAME_GUNFRONT || board_cfg.game == GAME_SSI;
+wire [1:0] orientation = {1'b0, vertical};
+
 F2 F2(
     .clk(clk_sys),
     .ce_pixel(ce_pix),
@@ -509,8 +537,8 @@ F2 F2(
     .joystick_p4({m_fire4[5:0], m_up4, m_down4, m_left4, m_right4}),
 
     .analog_abs(1'b1),
-    .analog_p1(8'h80),
-    .analog_p2(8'h80),
+    .analog_p1(sens(analog_p1)),
+    .analog_p2(sens(analog_p2)),
 
     .dswa(dswa),
     .dswb(dswb),

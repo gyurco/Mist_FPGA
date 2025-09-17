@@ -306,10 +306,6 @@ module TC0480SCP #(parameter SS_IDX=-1) (
     input OUHLDn,
     input OUVLDn,
 
-    // Core tweaks
-    input [15:0] sync_xofs,
-    input [15:0] sync_yofs,
-
     ssbus_if.slave ssbus
 );
 
@@ -337,8 +333,8 @@ tc0480scp_simple_counter raw_counter(
     .line_strobe,
     .frame_strobe,
     .flip(0),
-    .xbase(sync_xofs),
-    .ybase(sync_yofs),
+    .xbase(0),
+    .ybase(0),
     .xofs(0),
     .yofs(0),
     .xread(dispx),
