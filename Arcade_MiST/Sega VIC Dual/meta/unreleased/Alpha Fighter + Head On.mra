@@ -11,7 +11,7 @@
 		<dip bits="0" ids="3,4" name="H.O. Lives" values="0,1"></dip>
 		<dip bits="1,2" ids="3,4,5,6" name="A.F. Lives" values="0,1,2,3"></dip>
 		<dip bits="3" ids="1000,1500" name="A.F. Bonus life at" values="0,1"></dip>
-		<dip bits="4" ids="Off,On" name="A.F. Life for final UFO" values="1,0"></dip>
+		<dip bits="4" ids="On,Off" name="A.F. Life for final UFO"></dip>
 	</switches>
 
 	<rom index="1"><part>00</part></rom>
