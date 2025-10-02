@@ -4,6 +4,7 @@ set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) ./jtfra
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) ./jtframe_frac_cen.v      ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ./tc0260dar.sv      ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ./tc0200obj.sv      ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ./tc0200obj_koshien.sv ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ./F2.sv      ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ./video_timing.sv   ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ./tc0100scn.sv      ]

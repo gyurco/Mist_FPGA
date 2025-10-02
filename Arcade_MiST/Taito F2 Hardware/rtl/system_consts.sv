@@ -17,7 +17,7 @@ package system_consts;
     parameter int SSIDX_SCN_MUX_RAM = 15;
     parameter int SSIDX_SCN_1 = 16;
     parameter int SSIDX_480SCP = 17;
-
+    parameter int SSIDX_KOSHIEN = 18;
 
     parameter bit [31:0] SS_DDR_BASE       = 32'h3E00_0000;
     parameter bit [31:0] OBJ_FB_DDR_BASE   = 32'h3800_0000;
@@ -105,7 +105,8 @@ package system_consts;
         GAME_QCRAYON2,
         GAME_DRIFTOUT,
         GAME_DEADCONXJ,
-        GAME_METALBA
+        GAME_METALBA,
+        GAME_HTHERO
     } game_t;
 
     typedef struct packed {

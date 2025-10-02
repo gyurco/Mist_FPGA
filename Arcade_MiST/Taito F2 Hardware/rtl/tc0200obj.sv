@@ -17,19 +17,12 @@ module TC0200OBJ #(parameter SS_IDX=-1) (
     output reg RDWEn,
 
     output reg EDMAn, // TODO - is dma started by vblank?
+    input dma_start,
 
     output [11:0] DOT,
 
     input EXHBLn,
     input EXVBLn,
-
-    output reg HSYNCn,
-    output reg VSYNCn,
-    output reg HBLn,
-    output reg VBLn,
-
-    // Make the sync more compatible with consumer CRTs
-    input sync_fix,
 
     // bank switching and extension support
     output reg code_modify_req,
@@ -74,43 +67,40 @@ reg [15:0] work_buffer[8];
 wire [12:0] inst_tile_code       =  work_buffer[0][12:0];
 wire [7:0]  inst_x_zoom          =  work_buffer[1][7:0];
 wire [7:0]  inst_y_zoom          =  work_buffer[1][15:8];
-wire [11:0] inst_x_coord         =  work_buffer[6][11:0];
-wire        inst_latch_extra     =  work_buffer[6][12];
-wire        inst_latch_master    =  work_buffer[6][13];
-wire        inst_use_extra       = ~work_buffer[6][14];
-wire        inst_use_scroll      = ~work_buffer[6][15];
-wire [11:0] inst_y_coord         =  work_buffer[7][11:0];
-wire        inst_is_cmd          =  work_buffer[7][15];
-wire [2:0]  inst_unk1            =  work_buffer[7][14:12];
+wire        inst_is_cmd          =  work_buffer[3][15];
+wire [2:0]  inst_unk1            =  work_buffer[3][14:12];
 wire [7:0]  inst_color           =  work_buffer[4][7:0];
 wire        inst_x_flip          =  work_buffer[4][8];
 wire        inst_y_flip          =  work_buffer[4][9];
 wire        inst_reuse_color     =  work_buffer[4][10];
-wire        inst_next_seq        =  work_buffer[4][11];
+wire        inst_seq        =  work_buffer[4][11];
 wire        inst_use_latch_y     =  work_buffer[4][12];
 wire        inst_inc_y           =  work_buffer[4][13];
 wire        inst_use_latch_x     =  work_buffer[4][14];
 wire        inst_inc_x           =  work_buffer[4][15];
 wire [15:0] inst_cmd             =  work_buffer[5];
+wire [11:0] inst_base_x          =  work_buffer[6][11:0];
+wire [11:0] inst_base_y          =  work_buffer[7][11:0];
 reg         inst_debug;
 
 assign code_original = inst_tile_code;
 wire [18:0] tile_code = code_modified;
 
 reg [15:0] cmd_ctrl;
+reg [15:0] cmd_flags;
 wire ctrl_disable = cmd_ctrl[12];
 wire ctrl_flipscreen = cmd_ctrl[13];
 wire ctrl_6bpp = cmd_ctrl[8];
 wire ctrl_a14 = cmd_ctrl[0];
 wire ctrl_a13 = cmd_ctrl[10];
 
+wire cmd_a14 = cmd_flags[0];
+wire cmd_a13 = cmd_flags[10];
+
 reg [12:0] obj_addr;
 
 reg is_cmd;
-// device always reads from the lowest bank when access the cmd data from the
-// first instance
-reg zero_bank;
-assign RA = zero_bank ? { 2'b00, obj_addr } : {ctrl_a14, ctrl_a13, obj_addr};
+assign RA = is_cmd ? {cmd_a14, cmd_a13, obj_addr} : {ctrl_a14, ctrl_a13, obj_addr};
 
 
 typedef enum
@@ -173,7 +163,9 @@ dualport_ram_unreg #(.WIDTH(1), .WIDTHAD(16)) fb_dirty_buffer
     .q_b(fb_dirty_is_set)
 );
 
-reg [11:0] master_x, master_y, extra_x, extra_y;
+reg [11:0] dma_master_x, dma_master_y, dma_extra_x, dma_extra_y, dma_x, dma_y;
+reg dma_ignore_all, dma_ignore_extra, dma_latch_extra, dma_latch_master;
+
 reg [11:0] latch_x, latch_y;
 reg [7:0]  latch_color;
 reg prev_vbl_n, vbl_edge;
@@ -205,10 +197,10 @@ tc0200obj_data_shifter shifter(
     .burstcnt(read_tile_burstcnt),
     .load_complete(read_tile_complete),
 
-    .x(ctrl_flipscreen ? (flip_x_origin - latch_x) : latch_x),
-    .y(ctrl_flipscreen ? (flip_y_origin - latch_y) : latch_y),
-    .flip_x(inst_x_flip ^ ctrl_flipscreen),
-    .flip_y(inst_y_flip ^ ctrl_flipscreen),
+    .x(latch_x),
+    .y(latch_y),
+    .flip_x(inst_x_flip),
+    .flip_y(inst_y_flip),
     .color(latch_color),
 
     .row_valid,
@@ -261,7 +253,7 @@ tc0200obj_zoom_calc column_calc(
 reg [17:0] read_pacing;
 reg [4:0] busy_count;
 reg test_pause = 0;
-    
+
 reg [11:0] base_x, base_y;
 reg prev_seq;
 reg is_seq_start;
@@ -271,13 +263,8 @@ always @(posedge clk) begin
     code_modify_req <= 0;
     row_calc_start <= 0;
     col_calc_start <= 0;
-    
-    paused <= 0;
 
-    prev_vbl_n <= VBLn;
-    if (prev_vbl_n & ~VBLn) begin
-        vbl_edge <= 1;
-    end
+    paused <= 0;
 
     if (ce_13m) begin
         read_pacing <= read_pacing + 1;
@@ -294,8 +281,7 @@ always @(posedge clk) begin
             RDWEn <= 1;
             EDMAn <= 1;
 
-            if (!RESET & vbl_edge) begin
-                vbl_edge <= 0;
+            if (dma_start) begin
                 if (pause)
                     obj_state <= ST_PAUSE_INIT;
                 else
@@ -310,8 +296,7 @@ always @(posedge clk) begin
 
         ST_PAUSE: begin
             paused <= 1;
-            if (vbl_edge) begin
-                vbl_edge <= 0;
+            if (dma_start) begin
                 if (~pause) begin
                     scanout_buffer <= ~scanout_buffer;
                     obj_state <= ST_DMA_INIT;
@@ -326,10 +311,6 @@ always @(posedge clk) begin
             scanout_buffer <= ~scanout_buffer;
             busy_count <= 0;
             obj_state <= ST_PRE_DMA;
-
-            // FIXME, verify that this resets
-            extra_x <= 0;
-            extra_y <= 0;
         end
 
         ST_PRE_DMA: if (ce_13m) begin
@@ -355,20 +336,26 @@ always @(posedge clk) begin
                 0: begin
                     obj_addr <= dma_addr + 13'd2;
                 end
-                1: work_buffer[1] <= Din;
+                1: {dma_ignore_all, dma_ignore_extra, dma_latch_master, dma_latch_extra, dma_x} <= Din;
                 2: begin
                     obj_addr <= dma_addr + 13'd3;
                 end
-                3: work_buffer[2] <= Din;
+                3: begin
+                    dma_y <= Din[11:0];
+                    if (dma_latch_master) dma_master_x <= dma_x;
+                    if (dma_latch_extra) dma_extra_x <= dma_x;
+                end
                 4: begin
                     obj_addr <= dma_addr + 13'd6;
-                    Dout <= work_buffer[1];
+                    Dout <= {4'd0, dma_ignore_all ? dma_x : dma_ignore_extra ? ( dma_x + dma_master_x ) : ( dma_x + dma_master_x + dma_extra_x )};
+                    if (dma_latch_master) dma_master_y <= dma_y;
+                    if (dma_latch_extra) dma_extra_y <= dma_y;
                     RDWEn <= 0;
                 end
                 5: RDWEn <= 1;
                 6: begin
                     obj_addr <= dma_addr + 13'd7;
-                    Dout <= work_buffer[2];
+                    Dout <= {4'd0, dma_ignore_all ? dma_y : dma_ignore_extra ? ( dma_y + dma_master_y ) : ( dma_y + dma_master_y + dma_extra_y )};
                     RDWEn <= 0;
                 end
                 7: RDWEn <= 1;
@@ -383,7 +370,7 @@ always @(posedge clk) begin
         end
 
         ST_READ_START: if (ce_13m) begin
-            if (obj_addr[12:3] == 835 || vbl_edge) begin
+            if (obj_addr[12:3] == 835) begin
                 obj_state <= ST_IDLE;
             end else begin
                 if (read_pacing[17:8] >= obj_addr[12:3]) begin
@@ -409,7 +396,7 @@ always @(posedge clk) begin
             case(obj_addr[2:0])
                 3'd3: begin
                     if (Din[15]) begin // is_cmd
-                        zero_bank <= ~Din[0];
+                        cmd_flags <= Din;
                         is_cmd <= 1;
                     end
                 end
@@ -417,7 +404,6 @@ always @(posedge clk) begin
                 3'd5: begin
                     if (is_cmd) begin
                         cmd_ctrl <= Din;
-                        zero_bank <= 0;
                         is_cmd <= 0;
                     end
                     code_modify_req <= 1;
@@ -436,27 +422,28 @@ always @(posedge clk) begin
         end
 
         ST_EVAL0: begin
-            is_seq_start <= (inst_next_seq & ~prev_seq) | (~inst_next_seq & ~prev_seq);
-            prev_seq <= inst_next_seq;
+            prev_seq <= inst_seq;
             obj_state <= ST_EVAL1;
+            base_x <= inst_base_x;
+            if ((inst_seq & ~prev_seq) | (~inst_seq & ~prev_seq)) begin
+                base_y <= inst_base_y;
+                is_seq_start <= 1;
+            end else begin
+                is_seq_start <= 0;
+            end
         end
 
         ST_EVAL1: begin
-            if (is_seq_start) begin
-                base_x <= inst_x_coord + (inst_use_scroll ? ( master_x + (inst_use_extra ? extra_x : 12'd0) ) : 12'd0);
-                base_y <= inst_y_coord + (inst_use_scroll ? ( master_y + (inst_use_extra ? extra_y : 12'd0) ) : 12'd0);
+            if (inst_use_latch_y) begin
+                latch_y <= latch_y + {7'd0, row_count};
+            end else begin
+                latch_y <= base_y;
             end
 
-            // FIXME confirm hardware behavior when only latch bit is set
-            // liquidk sometimes does this and mame ignores it
-            if (inst_latch_extra & ~inst_use_extra) begin
-                extra_x <= inst_x_coord;
-                extra_y <= inst_y_coord;
-            end
-
-            if (inst_latch_master & ~inst_use_scroll) begin
-                master_x <= inst_x_coord;
-                master_y <= inst_y_coord;
+            if (inst_use_latch_x | inst_inc_x) begin
+                latch_x <= latch_x + {7'd0, inst_inc_x ? col_count : 5'd0};
+            end else begin
+                latch_x <= base_x + {7'd0, inst_inc_x ? col_count : 5'd0};
             end
 
             obj_state <= ST_EVAL2;
@@ -471,18 +458,6 @@ always @(posedge clk) begin
             end else begin
                 row_calc_start <= 1;
                 col_calc_start <= inst_inc_x;
-            end
-
-            // We are intentionally using the previous col_count and row_count
-            if (inst_use_latch_y) begin
-                latch_y <= latch_y + {7'd0, row_count};
-            end else begin
-                latch_y <= base_y;
-            end
-            if (inst_use_latch_x | inst_inc_x) begin
-                latch_x <= latch_x + {7'd0, inst_inc_x ? col_count : 5'd0};
-            end else begin
-                latch_x <= base_x + {7'd0, inst_inc_x ? col_count : 5'd0};
             end
 
             if (~inst_reuse_color) begin
@@ -612,15 +587,10 @@ end
 wire [9:0] H_OFS = 90;
 wire [9:0] H_START = 0 + H_OFS;
 wire [9:0] H_END = 424 + H_OFS - 1;
-wire [9:0] HS_START = 340 + H_OFS;
-wire [9:0] HS_END = sync_fix ? (372 + H_OFS - 1) : (404 + H_OFS - 1);
 wire [9:0] HB_START = 320 + H_OFS;
-wire [9:0] HB_END = 8 + H_OFS;
 
 wire [7:0] VS_START = 240;
-wire [7:0] VS_END = sync_fix ? (244 - 1) : (246 - 1);
-wire [7:0] VB_START = 224;
-wire [7:0] VB_END = 255;
+wire [7:0] VS_END = 246 - 1;
 wire [7:0] V_EXVBL_RESET = 250; // from signal trace
 
 
@@ -631,6 +601,9 @@ reg [6:0] burstidx;
 reg line_buffer_write;
 reg [7:0] line_buffer_write_addr;
 reg [63:0] line_buffer_wdata;
+
+wire [9:0] hcnt_scanout = ctrl_flipscreen ? ~hcnt : hcnt;
+wire [7:0] vcnt_scanout = ctrl_flipscreen ? ~vcnt : vcnt;
 
 dualport_ram_unreg #(.WIDTH(64), .WIDTHAD(8)) line_buffer
 (
@@ -644,7 +617,7 @@ dualport_ram_unreg #(.WIDTH(64), .WIDTHAD(8)) line_buffer
     // Port B
     .clock_b(clk),
     .wren_b(0),
-    .address_b({~vcnt[0], hcnt[8:2]}),
+    .address_b({~vcnt_scanout[0], hcnt_scanout[8:2]}),
     .data_b(0),
     .q_b(lb_dout)
 );
@@ -652,7 +625,7 @@ dualport_ram_unreg #(.WIDTH(64), .WIDTHAD(8)) line_buffer
 
 wire [63:0] lb_dout;
 
-reg ex_vbl_n_prev, vbl_n_prev;
+reg ex_vbl_n_prev;
 reg ex_vbl_end, vbl_start;
 reg scanout_active;
 reg scanout_newline;
@@ -663,7 +636,7 @@ scan_state_t scan_state = SCAN_IDLE;
 
 logic [11:0] out_color;
 always_comb begin
-    unique case (hcnt[1:0])
+    unique case (hcnt_scanout[1:0])
         0: out_color = lb_dout[11:0];
         1: out_color = lb_dout[27:16];
         2: out_color = lb_dout[43:32];
@@ -686,13 +659,11 @@ always_ff @(posedge clk) begin
     if (ce_pixel) begin
         ex_vbl_n_prev <= EXVBLn;
         ex_hbl_n_prev <= EXHBLn;
-        vbl_n_prev <= VBLn;
 
         if (EXVBLn & ~ex_vbl_n_prev) begin
             ex_vbl_end <= 1;
         end
-        if (~VBLn & vbl_n_prev) begin
-            //vbl_start <= 1;
+        if (~EXVBLn & ex_vbl_n_prev) begin
             scanout_active <= 0;
         end
 
@@ -712,11 +683,6 @@ always_ff @(posedge clk) begin
                 end
             end
         end
-
-        HSYNCn <= ~(hcnt >= HS_START && hcnt <= HS_END);
-        HBLn <= ~(hcnt >= HB_START || hcnt <= HB_END);
-        VSYNCn <= ~(vcnt >= VS_START && vcnt <= VS_END);
-        VBLn <= ~(vcnt >= VB_START); // && vcnt <= VB_END);
     end
 
     fb_dirty_scan_clear <= 0;
@@ -726,7 +692,7 @@ always_ff @(posedge clk) begin
         SCAN_IDLE: begin
             ddr_fb.acquire <= 0;
             ddr_fb.read <= 0;
-            fb_dirty_scan_addr <= { fb_dirty_scan_addr[15:7], hcnt[6:0] };
+            fb_dirty_scan_addr <= { fb_dirty_scan_addr[15:7], hcnt_scanout[6:0] };
             fb_dirty_scan_clear <= scanout_active & ~paused;
 
             if (scanout_newline) begin
@@ -740,8 +706,8 @@ always_ff @(posedge clk) begin
             if (~ddr_fb.busy) begin
                 ddr_fb.read <= 1;
                 ddr_fb.burstcnt <= 128;
-                ddr_fb.addr <= OBJ_FB_DDR_BASE + { 13'd0, scanout_buffer, vcnt + 8'd17, 10'd0 };
-                fb_dirty_scan_addr <= { scanout_buffer, vcnt + 8'd17, 7'd0 };
+                ddr_fb.addr <= OBJ_FB_DDR_BASE + { 13'd0, scanout_buffer, vcnt_scanout, 10'd0 };
+                fb_dirty_scan_addr <= { scanout_buffer, vcnt_scanout, 7'd0 };
                 burstidx <= 0;
                 scan_state <= SCAN_WAIT_READ;
             end
@@ -753,14 +719,14 @@ always_ff @(posedge clk) begin
                 if (ddr_fb.rdata_ready) begin
                     line_buffer_write <= 1;
                     line_buffer_wdata <= ddr_fb.rdata;
-                    line_buffer_write_addr <= {vcnt[0], burstidx};
+                    line_buffer_write_addr <= {vcnt_scanout[0], burstidx};
                     burstidx <= burstidx + 1;
 
                     fb_dirty_scan_addr <= fb_dirty_scan_addr + 1;
 
                     if (burstidx == 127) begin
                         scan_state <= SCAN_IDLE;
-                        fb_dirty_scan_addr <= { scanout_buffer, vcnt + 8'd17, 7'd0 }; // reset
+                        fb_dirty_scan_addr <= { scanout_buffer, vcnt_scanout, 7'd0 }; // reset
                     end
                 end
             end
@@ -771,59 +737,6 @@ end
 
 endmodule
 
-
-/*
-        Sprite format:
-        0000: ---xxxxxxxxxxxxx tile code (0x0000 - 0x1fff)
-        0002: xxxxxxxx-------- sprite y-zoom level
-              --------xxxxxxxx sprite x-zoom level
-
-              0x00 - non scaled = 100%
-              0x80 - scaled to 50%
-              0xc0 - scaled to 25%
-              0xe0 - scaled to 12.5%
-              0xff - scaled to zero pixels size (off)
-
-        [this zoom scale may not be 100% correct, see Gunfront flame screen]
-
-        0004: ----xxxxxxxxxxxx x-coordinate (-0x800 to 0x07ff)
-              ---x------------ latch extra scroll
-              --x------------- latch master scroll
-              -x-------------- don't use extra scroll compensation
-              x--------------- absolute screen coordinates (ignore all sprite scrolls)
-              xxxx------------ the typical use of the above is therefore
-                               1010 = set master scroll
-                               0101 = set extra scroll
-        0006: ----xxxxxxxxxxxx y-coordinate (-0x800 to 0x07ff)
-              x--------------- marks special control commands (used in conjunction with 00a)
-                               If the special command flag is set:
-              ---------------x related to sprite ram bank
-              ---x------------ unknown (deadconx, maybe others)
-              --x------------- unknown, some games (growl, gunfront) set it to 1 when
-                               screen is flipped
-        0008: --------xxxxxxxx color (0x00 - 0xff)
-              -------x-------- flipx
-              ------x--------- flipy
-              -----x---------- if set, use latched color, else use & latch specified one
-              ----x----------- if set, next sprite entry is part of sequence
-              ---x------------ if clear, use latched y coordinate, else use current y
-              --x------------- if set, y += 16
-              -x-------------- if clear, use latched x coordinate, else use current x
-              x--------------- if set, x += 16
-        000a: only valid when the special command bit in 006 is set
-              ---------------x related to sprite ram bank. I think this is the one causing
-                               the bank switch, implementing it this way all games seem
-                               to properly bank switch except for footchmp which uses the
-                               bit in byte 006 instead.
-              ------------x--- unknown; some games toggle it before updating sprite ram.
-              ------xx-------- unknown (finalb)
-              -----x---------- unknown (mjnquest)
-              ---x------------ disable the following sprites until another marker with
-                               this bit clear is found
-              --x------------- flip screen
-
-        000b - 000f : unused
-*/
 
 module tc0200obj_zoom_calc(
     input         clk,

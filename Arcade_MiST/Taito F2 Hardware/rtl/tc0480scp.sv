@@ -828,7 +828,7 @@ always_ff @(posedge clk) begin
         for( i = 0; i < 4; i = i + 1 ) begin
             if (bg_req[i] != bg_ack[i]) begin
                 if (|bg_attrib[i][14:0]) begin
-                    rom_address <= {bg_attrib[i][15:0], bg_ycnt_adj[i][3:0] ^ {4{bg_attrib[i][31]}}, 3'b0 };
+                    rom_address <= {1'b0, bg_attrib[i][14:0], bg_ycnt_adj[i][3:0] ^ {4{bg_attrib[i][31]}}, 3'b0 };
                     rom_req <= ~rom_req;
                     req_active <= 1;
                     req_index <= 2'(i);

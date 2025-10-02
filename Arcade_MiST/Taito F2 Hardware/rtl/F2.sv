@@ -171,9 +171,9 @@ reg ss_read = 0;
 wire ss_busy;
 
 ssbus_if ssbus();
-ssbus_if ssb[19]();
+ssbus_if ssb[20]();
 
-ssbus_mux #(.COUNT(19)) ssmux(
+ssbus_mux #(.COUNT(20)) ssmux(
     .clk,
     .slave(ssbus),
     .masters(ssb)
@@ -759,7 +759,11 @@ wire obj_code_modify_req;
 wire [12:0] obj_code_original;
 wire [18:0] obj_code_modified_ext;
 wire [18:0] obj_code_modified_190fmc;
+wire [18:0] obj_code_modified_koshien;
 
+wire [18:0] obj_code_modified = cfg_190fmc ? obj_code_modified_190fmc :
+                                cfg_obj_extender == 2'b11 ? obj_code_modified_koshien :
+                                obj_code_modified_ext;
 TC0200OBJ tc0200obj(
     .clk,
 
@@ -779,22 +783,16 @@ TC0200OBJ tc0200obj(
     .RDWEn(ORDWEn),
 
     .EDMAn(DMAn),
+    .dma_start(global_vblank & !reset),
 
     .DOT(obj_dot),
 
     .EXHBLn(global_hcnt != cfg_hofs_200obj),
     .EXVBLn(global_vcnt != cfg_vofs_200obj),
 
-    .HSYNCn,
-    .VSYNCn,
-    .HBLn,
-    .VBLn,
-
-    .sync_fix,
-
     .code_modify_req(obj_code_modify_req),
     .code_original(obj_code_original),
-    .code_modified(cfg_190fmc ? obj_code_modified_190fmc : obj_code_modified_ext),
+    .code_modified(obj_code_modified),
 
     .ddr(ddr_obj),
 
@@ -841,12 +839,20 @@ TC0190FMC #(.SS_IDX(SSIDX_190FMC)) tc0190fmc(
     .ssbus(ssb[12])
 );
 
-wire HSYNCn;
-wire VSYNCn;
-wire HBLn;
-wire VBLn;
-wire HBLOn;
-wire VBLOn;
+TC0200OBJ_Koshien #(.SS_IDX(SSIDX_KOSHIEN)) tc0200obj_koshien(
+    .clk,
+
+    .cs_n(EXTENSIONn),
+    .cpu_ds_n(cpu_ds_n),
+    .cpu_rw(cpu_rw),
+    .din(cpu_data_out),
+
+    .code_original(obj_code_original),
+    .code_modified(obj_code_modified_koshien),
+
+    .ssb(ssb[19])
+);
+
 
 wire [7:0] dar_red, dar_green, dar_blue;
 wire dar_hblank_n, dar_vblank_n;
@@ -941,9 +947,9 @@ TC0100SCN #(.SS_IDX(SSIDX_SCN_0)) scn0(
     // Video interface
     .SC(scn0_dot_color),
     .HSYNn(),
-    .HBLOn,
+    .HBLOn(),
     .VSYNn(),
-    .VBLOn,
+    .VBLOn(),
     .OLDH(),
     .OLDV(),
     .IHLD(global_hcnt == cfg_hofs_100scn0),
@@ -1241,8 +1247,8 @@ TC0110PR tc0110pr(
     .DACKn(CDTACKn),
 
     // Video Input
-    .HSYn(HSYNCn),
-    .VSYn(VSYNCn),
+    .HSYn(~hsync),
+    .VSYn(~vsync),
 
     .SC(scn0_dot_color),
     .OB({3'b0, obj_dot}),
@@ -1358,7 +1364,7 @@ wire ICLR1n = ~(~IACKn & (cpu_addr[2:0] == 3'b101) & ~cpu_ds_n[0]);
 wire ICLR2n = ~(~IACKn & (cpu_addr[2:0] == 3'b110) & ~cpu_ds_n[0]);
 
 reg int_req1, int_req2;
-reg vbl_prev, dma_prev;
+reg vbl_prev_n, dma_prev_n;
 
 assign IPLn = ss_irq ? ~3'b111 :
               int_req2 ? ~3'b110 :
@@ -1366,17 +1372,17 @@ assign IPLn = ss_irq ? ~3'b111 :
               ~3'b000;
 
 always_ff @(posedge clk) begin
-    vbl_prev <= VBLn;
-    dma_prev <= DMAn;
+    vbl_prev_n <= ~global_vblank;
+    dma_prev_n <= DMAn;
 
     if (reset) begin
         int_req2 <= 0;
         int_req1 <= 0;
     end else begin
-        if (vbl_prev & ~VBLn) begin
+        if (vbl_prev_n & global_vblank) begin
             int_req1 <= 1;
         end
-        if (~dma_prev & DMAn) begin
+        if (~dma_prev_n & DMAn) begin
             int_req2 <= 1;
         end
 

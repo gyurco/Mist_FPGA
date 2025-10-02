@@ -193,7 +193,6 @@ reg [15:0] bg0_rowscroll, bg1_rowscroll;
 reg [15:0] bg1_colscroll;
 reg [15:0] bg0_code, bg1_code;
 reg [15:0] bg0_attrib, bg1_attrib;
-reg [15:0] bg0_attrib_next, bg1_attrib_next;
 reg [15:0] fg0_code, fg0_gfx;
 
 reg bg0_load, bg1_load;
@@ -373,7 +372,7 @@ always @(posedge clk) begin
             bg1_load <= 0;
             unique case(access_cycle)
                 BG0_ROW_SCROLL: bg0_rowscroll <= SDin;
-                BG0_ATTRIB0: bg0_attrib_next <= SDin;
+                BG0_ATTRIB0: bg0_attrib <= SDin;
                 BG0_ATTRIB1_EX,
                 BG0_ATTRIB1: begin
                     bg0_code <= SDin;
@@ -384,7 +383,7 @@ always @(posedge clk) begin
                 end
 
                 BG1_ROW_SCROLL: bg1_rowscroll <= SDin;
-                BG1_ATTRIB0: bg1_attrib_next <= SDin;
+                BG1_ATTRIB0: bg1_attrib <= SDin;
                 BG1_ATTRIB1_EX,
                 BG1_ATTRIB1: begin
                     bg1_code <= SDin;
@@ -447,13 +446,11 @@ always @(posedge clk) begin
                 rom_req_ch <= 0;
             end else begin
                 if (bg0_rom_req) begin
-                    bg0_attrib <= bg0_attrib_next;
                     rom_address <= bg0_rom_address;
                     rom_req <= ~rom_req;
                     rom_req_ch <= 1;
                     bg0_rom_req <= 0;
                 end else if (bg1_rom_req) begin
-                    bg1_attrib <= bg1_attrib_next;
                     rom_address <= bg1_rom_address;
                     rom_req <= ~rom_req;
                     rom_req_ch <= 2;
