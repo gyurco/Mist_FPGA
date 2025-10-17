@@ -203,8 +203,7 @@ tc0200obj_data_shifter shifter(
     .flip_y(inst_y_flip),
     .color(latch_color),
 
-    .row_valid,
-    .row_index,
+    .row_advance,
 
     .col_valid,
     .col_index,
@@ -224,18 +223,16 @@ tc0200obj_data_shifter shifter(
 reg row_calc_start, col_calc_start;
 wire row_calc_ready, col_calc_ready;
 wire [4:0] row_count, col_count;
-wire [15:0] row_valid, col_valid;
-wire [(16 * 4)-1:0] row_index, col_index;
+wire [15:0] row_advance, col_valid;
+wire [(16 * 4)-1:0] col_index;
 
-tc0200obj_zoom_calc row_calc(
+tc0200obj_zoom_row_calc row_calc(
     .clk,
     .start(row_calc_start),
-    .cont(inst_inc_y),
     .ready(row_calc_ready),
     .delta(zoom_dy),
     .count(row_count),
-    .valid(row_valid),
-    .indices(row_index)
+    .advance(row_advance)
 );
 
 tc0200obj_zoom_calc column_calc(
@@ -451,8 +448,8 @@ always @(posedge clk) begin
 
         ST_EVAL2: begin
             if (is_seq_start) begin
-                zoom_dx <= 9'h100 - { 1'b0, inst_x_zoom };
-                zoom_dy <= 9'h100 - { 1'b0, inst_y_zoom };
+                zoom_dx <= |inst_x_zoom ? { 1'b0, ~inst_x_zoom } : 9'h100;
+                zoom_dy <= |inst_y_zoom ? { 1'b0, ~inst_y_zoom } : 9'h100;
                 row_calc_start <= 1;
                 col_calc_start <= 1;
             end else begin
@@ -780,6 +777,45 @@ end
 
 endmodule
 
+module tc0200obj_zoom_row_calc(
+    input         clk,
+
+    input         start,
+    output reg    ready,
+    input  [8:0]  delta,
+
+    output reg [4:0]  count,
+    output reg [15:0] advance
+);
+
+reg [8:0] accum;
+reg [3:0] index;
+
+always @(posedge clk) begin
+    bit [8:0] next_accum;
+    if (start) begin
+        ready <= 0;
+        index <= 0;
+        count <= 0;
+        advance <= 0;
+    end else if (~ready) begin
+        index <= index + 1;
+        next_accum = accum + delta;
+        accum <= next_accum;
+        if (next_accum[8] != accum[8]) begin
+            advance[index] <= 1;
+            count <= count + 1;
+        end
+
+        if (index == 15) begin
+            ready <= 1;
+        end
+    end
+end
+
+endmodule
+
+
 module tc0200obj_data_shifter(
     input clk,
 
@@ -798,8 +834,7 @@ module tc0200obj_data_shifter(
     input        flip_y,
     input [7:0]  color,
 
-    input [15:0] row_valid,
-    input [(16*4)-1:0] row_index,
+    input [15:0] row_advance,
 
     input [15:0] col_valid,
     input [(16*4)-1:0] col_index,
@@ -841,6 +876,7 @@ wire [6:0] x_addr = x[8:2];
 wire [1:0] x_shift = x[1:0];
 
 reg [3:0] row;
+reg [3:0] row_offset;
 reg [2:0] col;
 
 task prepare_row(bit [3:0] r);
@@ -851,29 +887,23 @@ task prepare_row(bit [3:0] r);
         row_data[i] <= 6'd0;
     end
 
-    if (row_valid[r]) begin
-        if (flip_y) begin
-            ri = ~row_index[ r * 4 +: 4 ]; // FIXME - this is a mess
-        end else begin
-            ri = row_index[ r * 4 +: 4 ]; // FIXME - this is a mess
-        end
+    ri = flip_y ? ~r : r;
 
-        for( i = 0; i < 16; i = i + 1 ) begin
-            if (col_valid[i[3:0]]) begin
-                if (flip_x) begin
-                    ci = ~col_index[ i[3:0] * 4 +: 4 ]; // FIXME - this is a mess
-                end else begin
-                    ci = col_index[ i[3:0] * 4 +: 4 ]; // FIXME - this is a mess
-                end
-                row_data[i + {3'b0, x_shift}] <= pixel[{ri, ci}];
+    for( i = 0; i < 16; i = i + 1 ) begin
+        if (col_valid[i[3:0]]) begin
+            if (flip_x) begin
+                ci = ~col_index[ i[3:0] * 4 +: 4 ]; // FIXME - this is a mess
+            end else begin
+                ci = col_index[ i[3:0] * 4 +: 4 ]; // FIXME - this is a mess
             end
+            row_data[i + {3'b0, x_shift}] <= pixel[{ri, ci}];
         end
     end
 endtask
 
 task prepare_draw();
     int i;
-    out_addr <= { y_addr, x_addr } + { 4'd0, row, 4'd0, col };
+    out_addr <= { y_addr, x_addr } + { 4'd0, row_offset, 4'd0, col };
     out_be <= 8'd0;
     out_data <= 64'd0;
     out_ready <= 1;
@@ -904,7 +934,8 @@ task prepare_draw();
         prepare_row( row + 1 );
         col <= 0;
         row <= row + 1;
-        if (~row_valid[row] || row == 15) begin
+        if (row_advance[row]) row_offset <= row_offset + 1;
+        if (row == 15) begin
             out_done <= 1;
         end
     end
@@ -918,6 +949,7 @@ always_ff @(posedge clk) begin
         out_done <= 0;
         out_ready <= 0;
         row <= 0;
+        row_offset <= 0;
         col <= 0;
     end else begin
         if (load) begin
