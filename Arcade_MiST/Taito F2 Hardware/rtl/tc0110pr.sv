@@ -30,6 +30,7 @@ module TC0110PR(
 );
 
 reg cpu_mode = 0;
+reg end_cpu_mode = 0;
 reg [12:0] cpu_addr;
 reg dtack_n;
 reg [12:0] color_addr;
@@ -73,10 +74,11 @@ always_ff @(posedge clk) begin
                     WEHn <= UDSn;
                     dtack_n <= 0;
                     cpu_mode <= 1;
+                    end_cpu_mode <= 1;
                 end
                 2'b10: begin
                     dtack_n <= 0;
-                    cpu_mode <= 0;
+                    end_cpu_mode <= 1;
                 end
                 default: begin
                     dtack_n <= 0;
@@ -86,6 +88,10 @@ always_ff @(posedge clk) begin
     end
 
     if (SCEn) begin
+        if (end_cpu_mode) begin
+            end_cpu_mode <= 0;
+            cpu_mode <= 0;
+        end
         dtack_n <= 1;
     end
 

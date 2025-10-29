@@ -556,8 +556,7 @@ always_comb begin
         GAME_QZCHIKYU,
         GAME_YESNOJ,
         GAME_QJINSEI,
-        GAME_QCRAYON,
-        GAME_QCRAYON2: begin
+        GAME_QCRAYON: begin
             IN0 = { start[0], 1'b0, joystick_p1[9:4] };
             IN1 = { start[1], 1'b0, joystick_p2[9:4] };
             IN2 = { 4'b0000, coin[1:0], 2'b00 };
@@ -1342,7 +1341,7 @@ TC0260DAR tc0260dar(
     .OHBLANKn(dar_hblank_n),
     .OVBLANKn(dar_vblank_n),
 
-    .IM(cfg_360pri ? { 1'b0, pri360_color[12:0] } : (|obj_dot[3:0]) ? { 2'b00, obj_dot } : { 1'b0, scn0_dot_color[12:0] } ),
+    .IM(cfg_360pri ? { 1'b0, pri360_color[12:0] } : (|scn0_dot_color[3:0]) ? { 1'b0, scn0_dot_color[12:0] } : { 2'b00, obj_dot } ),
 
     .VIDEOR(dar_red),
     .VIDEOG(dar_green),
