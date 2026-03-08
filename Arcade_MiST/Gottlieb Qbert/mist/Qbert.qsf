@@ -240,7 +240,7 @@ set_global_assignment -name VHDL_FILE ../rtl/spinner.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/sdram.sv
 set_global_assignment -name QIP_FILE ../rtl/pll.qip
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/m6532.sv
-set_global_assignment -name VERILOG_FILE ../rtl/sc01.v
+set_global_assignment -name QIP_FILE ../rtl/sc01a/sc01a.qip
 set_global_assignment -name VERILOG_FILE ../rtl/ram.v
 set_global_assignment -name VERILOG_FILE ../rtl/mylstar_board.v
 set_global_assignment -name VERILOG_FILE ../rtl/ma216_board.v

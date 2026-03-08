@@ -6,14 +6,15 @@ module ma216_board(
 
   input [5:0] IP2720,
 
-  output [7:0] audio,
+  output [15:0] audio_votrax,
+  output [7:0] audio_dac,
 
   input rom_init,
   input [17:0] rom_init_address,
   input [7:0] rom_init_data
 );
 
-assign audio = U7_8;
+assign audio_dac = U7_8;
 
 wire [15:0] AB;
 wire  [7:0] DBo;
@@ -22,7 +23,9 @@ wire  [7:0] U5_dout, U6_dout, U6000_dout, U6800_dout;
 wire  [7:0] U15_D_O;
 wire  [7:0] SB1 = 8'hFF;
 reg   [7:0] U11_18, U7_8;
-reg         rom0_ce, rom1_ce, riot_ce, dac0_ce, dac1_ce;
+reg   [1:0] inflection_reg;
+reg         stb;
+reg         rom0_ce, rom1_ce, riot_ce, dac0_ce, dac1_ce, stb_ce;
 
 wire  [7:0] DBi = riot_ce ? U15_D_O : U5_dout | U6_dout | U6000_dout | U6800_dout;
 
@@ -37,7 +40,7 @@ T65 U3(
   .DI(DBi),
   .DO(DBo),
   .IRQ_n(irq),
-  .NMI_n(U14_AR)
+  .NMI_n(~U14_AR)
 );
 
 always @(*) begin : U4
@@ -46,9 +49,11 @@ always @(*) begin : U4
 	riot_ce = 0;
 	dac0_ce = 0;
 	dac1_ce = 0;
+	stb_ce  = 0;
 	case (AB[14:12])
 		3'd0: riot_ce = 1;
 		3'd1: dac0_ce = 1;
+		3'd2: stb_ce  = 1;
 		3'd3: dac1_ce = 1;
 		3'd6: rom0_ce = 1;
 		3'd7: rom1_ce = 1;
@@ -107,20 +112,27 @@ always @(posedge clk)
 // U11 U18
 always @(posedge clk)
   if (dac1_ce) U11_18 <= DBo;
-/*
-reg votrax_clk; // todo: create 720KHz clock
-always @(posedge clk)
-  votrax_clk <= ~votrax_clk;
 
-sc01 U14(
-  .clk(votrax_clk), // 720KHz?
-  .PhCde(~DBo[5:0]),
-  .Pitch(),
-  .LatchCde(U4_O[2]),
-  .audio(),
-  .AR(U14_AR)
+// U9 latch for inflection
+always @(posedge clk)
+  if (stb_ce) inflection_reg <= DBo[7:6];
+
+always @(posedge clk)
+  stb <= stb_ce & ~RWn;
+
+sc01a #(.CLK_HZ(40_000_000), .ENABLE_RESAMPLER(0)) U14(
+    .clk(clk),
+    .reset_n(~reset),
+    .p(~DBo[5:0]),
+    .inflection(inflection_reg),
+    .stb(stb),
+    .ar(U14_AR),
+    .clk_dac(U11_18),
+    .audio_out_u(audio_votrax),
+    .audio_out(),
+    .audio_valid()
 );
-*/
+
 M6532 U15(
   .clk(clk),          // PHI 2
   .ce(cen),           // Clock enable

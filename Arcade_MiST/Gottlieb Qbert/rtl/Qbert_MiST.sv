@@ -641,7 +641,8 @@ always @(posedge clk_sys) begin
 	reset <= status[0] | buttons[1] | ~rom_loaded;
 end
 
-wire  [7:0] audio;
+wire  [7:0] audio_dac;
+wire [15:0] audio_votrax;
 wire        hs, vs, cs;
 wire        hb, vb;
 
@@ -705,7 +706,8 @@ ma216_board ma216_board(
 	.cen(sound_cen),
 	.reset(reset),
 	.IP2720(OP2720),
-	.audio(audio),
+	.audio_dac(audio_dac),
+	.audio_votrax(audio_votrax),
 	.rom_init(rom_init),
 	.rom_init_address(ioctl_addr),
 	.rom_init_data(ioctl_dout)
@@ -783,11 +785,13 @@ i2c_master #(40_000_000) i2c_master (
 	assign HDMI_PCLK = clk_sys;
 `endif
 
+wire [15:0] audio = audio_votrax + {2'b00,audio_dac, 6'd0};
+
 wire audio_out;
 assign AUDIO_L = audio_out;
 assign AUDIO_R = audio_out;
 
-dac #(.C_bits(8))dac(
+dac #(.C_bits(16))dac(
 	.clk_i(clk_sys),
 	.res_n_i(1'b1),
 	.dac_i(audio),
@@ -802,8 +806,8 @@ i2s i2s (
 	.sclk(I2S_BCK),
 	.lrclk(I2S_LRCK),
 	.sdata(I2S_DATA),
-	.left_chan({{3{~audio[7]}}, audio[6:0], audio[6:1]}),
-	.right_chan({{3{~audio[7]}}, audio[6:0], audio[6:1]}),
+	.left_chan({~audio[15], audio[14:0]}),
+	.right_chan({~audio[15], audio[14:0]})
 );
 `ifdef I2S_AUDIO_HDMI
 assign HDMI_MCLK = 0;
@@ -821,7 +825,7 @@ spdif spdif (
 	.clk_i(clk_sys),
 	.clk_rate_i(32'd40_000_000),
 	.spdif_o(SPDIF),
-	.sample_i({2{{3{~audio[7]}}, audio[6:0], audio[6:1]}})
+	.sample_i({2{~audio[15], audio[14:0]}})
 );
 `endif
 
