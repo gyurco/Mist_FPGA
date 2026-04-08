@@ -120,17 +120,17 @@ always @(posedge clk)
 always @(posedge clk)
   stb <= stb_ce & ~RWn;
 
-sc01a #(.CLK_HZ(40_000_000), .ENABLE_RESAMPLER(0)) U14(
-    .clk(clk),
-    .reset_n(~reset),
-    .p(~DBo[5:0]),
-    .inflection(inflection_reg),
-    .stb(stb),
-    .ar(U14_AR),
-    .clk_dac(U11_18),
-    .audio_out_u(audio_votrax),
-    .audio_out(),
-    .audio_valid()
+
+VotraxSound #(.CLK_HZ(40_000_000)) U14(
+  .clk(clk),
+  .reset_n(~reset),
+  .phoneme(~DBo[5:0]),
+  .inflection(inflection_reg),
+  .stb(stb),
+  .ar(U14_AR),
+  .clk_dac(U11_18),
+  .audio_out_u(audio_votrax),
+  .audio_valid()
 );
 
 M6532 U15(
