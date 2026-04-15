@@ -178,7 +178,7 @@ wire        diagonal = status[9];
 wire  [1:0] rotate_screen = status[11:10];
 wire        rotate_filter = status[12];
 
-wire  [1:0] orientation = {flip, core_mod != mod_tylz && core_mod != mod_insector && core_mod != mod_kngtmare && core_mod != mod_argus};
+wire  [1:0] orientation = {flip, core_mod != mod_tylz && core_mod != mod_insector && core_mod != mod_kngtmare && core_mod != mod_argus && core_mod != mod_reactor};
 wire  [7:0] dip_sw = status[23:16];
 
 assign 		LED = ~ioctl_downl;
@@ -240,6 +240,7 @@ localparam mod_tylz     = 5;
 localparam mod_insector = 6;
 localparam mod_argus    = 7;
 localparam mod_kngtmare = 8;
+localparam mod_reactor  = 9;
 
 wire        spinner_reset;
 // Mad Planets spinner
@@ -489,6 +490,28 @@ always @(*) begin
 			};
 		end
 
+		mod_reactor:
+		begin
+			IP1710 = { // IN1: service inputs
+				4'b0,
+				m_coin1, // coin 1
+				1'b0,
+				~service,       // service DIP (active-low): OSD Test mode enters service mode
+				m_one_player    // test button (active-high per MAME IN1 bit0 IP_ACTIVE_HIGH): fire/"Service Select"
+			};
+			IP4740 = { // IN4: buttons and start
+				2'b0,
+				m_coin2,                    // coin 2
+				m_coin1,                    // coin 1 (also in IP1710)
+				m_fireA,                    // button 1 (fire) + trackball left
+				m_fireB,                    // button 2        + trackball right
+				m_two_players,              // start 2P
+				m_one_player                // start 1P        + trackball left
+			};
+			//IPA1J2 = {-trackball_pos[7:0], trackball_pos[15:8]};
+			IPA1J2 = trackball_pos;
+		end
+
 		default:
 		begin
 		end
@@ -688,7 +711,8 @@ mylstar_board mylstar_board
 	.rom_init_address(ioctl_addr),
 	.rom_init_data(ioctl_dout),
 	.nvram_data(ioctl_din),
-	.bgram(core_mod == mod_krull || core_mod == mod_argus),
+	.bgram(core_mod == mod_krull || core_mod == mod_argus || core_mod == mod_reactor),
+	.reactor(core_mod == mod_reactor),
 
 	.vflip(flip),
 	.hflip(flip),

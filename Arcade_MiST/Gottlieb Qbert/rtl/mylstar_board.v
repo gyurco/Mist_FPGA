@@ -36,6 +36,7 @@ module mylstar_board
   input   [7:0] rom_init_data,
   output  [7:0] nvram_data,
   input         bgram, // E11-12 writeable
+  input         reactor,
 
   input vflip,
   input hflip,
@@ -86,7 +87,7 @@ reg  [7:0] G11_Q;
 wire [3:0] K9_Y, K10_Y, K11_Y, G12_Y, G13_Q, G14_Q, G15_Q;
 wire [7:0] E7_Q, E8_Ao, E8_Bo, E9_10_Bo, E10_11_Q, D11_Q, D12_Y, E11_12_Q, E13_Q;
 
-wire nCOLSEL = ~(ram_io_ce & addr[12:11] == 2'b10);
+wire nCOLSEL = reactor ? ~(rom4_ce & ~addr[12]) : ~(ram_io_ce & addr[12:11] == 2'b10);
 wire nBOJRSEL1 = ~(ram_io_ce & ~addr[12]);
 wire nBOJRWR = nBOJRSEL1 | WR_n; //F6_8
 wire nBRSEL = ~BRSEL;
@@ -136,11 +137,16 @@ wire [7:0] ram_dout = C5_Q | C6_Q | C7_Q | C9_10_Q | C8_9_Q | C10_11_Q;
 wire [7:0] rom_dout;
 wire [7:0] cpu_din = ram_dout | rom_dout | B11 | B12 | B14 | A1J2 | E8_Ao | BGRAMROM_DO;
 
+reg WR_n_d, op2_sel_d, op3_sel_d, op4_sel_d;
 always @(posedge clk_sys) begin : A8A9A10
-	if (!WR_n) begin
-		if (op2_sel) A10 <= cpu_dout;
-		if (op3_sel) A8 <= cpu_dout;
-		if (op4_sel) A9 <= cpu_dout;
+	WR_n_d <= WR_n;
+	op2_sel_d <= op2_sel;
+	op3_sel_d <= op3_sel;
+	op4_sel_d <= op4_sel;
+	if (!WR_n_d & WR_n) begin
+		if (op2_sel_d) A10 <= cpu_dout;
+		if (op3_sel_d) A8 <= cpu_dout;
+		if (op4_sel_d) A9 <= cpu_dout;
 	end
 end
 
@@ -176,10 +182,10 @@ always @(*) begin : B6
 			3'd1: ram1_cs = 1;
 			3'd2: ram2_cs = 1;
 			3'd3: ram3_cs = 1;
-			3'd4: ram4_cs = 1;
+			3'd4: if (reactor) FRSEL = 1; else ram4_cs = 1;
 			3'd5: ram5_cs = 1;
-			3'd6: FRSEL = 1;
-			3'd7: BRSEL = 1;
+			3'd6: if (reactor) BRSEL = 1; else FRSEL = 1;
+			3'd7: if (!reactor) BRSEL = 1;
 			default: ;
 		endcase
 end
@@ -204,6 +210,8 @@ always @(*) begin : B8
 		endcase
 end
 
+wire io_sel = reactor ? (rom4_ce & addr[12]) : (ram_io_ce & addr[12:11] == 2'b11 & ~addr[3]);
+
 reg wdcl, op1_sel, op2_sel, op3_sel, op4_sel;
 always @(*) begin: B9
 	// IO write selects
@@ -212,7 +220,7 @@ always @(*) begin: B9
 	op2_sel = 0;
 	op3_sel = 0;
 	op4_sel = 0;
-	if (~WR_n & ram_io_ce & addr[12:11] == 2'b11 & ~addr[3])
+	if (~WR_n & io_sel)
 		case (addr[2:0])
 			3'd0: wdcl = 1;
 			3'd1: op1_sel = 1;
@@ -231,7 +239,7 @@ always @(*) begin : B10
 	IP4740_sel = 0;
 	trackball0_sel = 0;
 	trackball1_sel = 0;
-	if (~RD_n & ram_io_ce & addr[12:11] == 2'b11 & ~addr[3])
+	if (~RD_n & io_sel)
 		case (addr[2:0])
 			3'd0: dip_sel = 1;
 			3'd1: IP1710_sel = 1;

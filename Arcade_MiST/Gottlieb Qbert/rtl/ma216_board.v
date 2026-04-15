@@ -120,7 +120,6 @@ always @(posedge clk)
 always @(posedge clk)
   stb <= stb_ce & ~RWn;
 
-
 VotraxSound #(.CLK_HZ(40_000_000)) U14(
   .clk(clk),
   .reset_n(~reset),
@@ -145,7 +144,7 @@ M6532 U15(
   .IRQ_n(irq),
   .CS1(riot_ce),      // Chip select 1, 1 = selected
   .CS2_n(~riot_ce),   // Chip select 2, 0 = selected
-  .PA_in({ &IP2720[3:0], 1'b0, ~IP2720 }),
+  .PA_in({ ~&IP2720[3:0], 1'b0, ~IP2720 }),
   .PA_out(),
   .PB_in({ ~U14_AR, 1'b1, ~SB1[5:0] }),
   .PB_out(),
