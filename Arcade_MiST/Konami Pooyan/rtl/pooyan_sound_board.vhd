@@ -245,7 +245,7 @@ cpu_clock_en <= '1' when clock_div1(2 downto 0) = "011" else '0';
 ayx_clock_en <= '1' when clock_div1(2 downto 0) = "111" else '0';
 
 -- mux rom/ram/devices data ouput to cpu data input w.r.t cpu address
-cpu_di <= cpu_rom_do   when cpu_addr(15 downto 12) = "0000" else -- 0000-0FFF
+cpu_di <= cpu_rom_do   when cpu_addr(15 downto 13) = "000" else -- 0000-1FFF
 			 wram_do      when cpu_addr(15 downto 12) = "0011" else -- 3000-3FFF
 			 ay1_do       when cpu_addr(15 downto 13) = "010"  else -- 4000-5FFF
 			 ay2_do       when cpu_addr(15 downto 13) = "011"  else -- 6000-7FFF
