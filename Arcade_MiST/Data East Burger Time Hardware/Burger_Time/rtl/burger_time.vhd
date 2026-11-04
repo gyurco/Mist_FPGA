@@ -520,7 +520,11 @@ begin
 			if (hcnt(2 downto 0) = "111" and hcnt8_rr = '0') or
 			   (hcnt(1 downto 0) = "10"  and hcnt8_rr = '1') then
 				if display_tile = '1' then
-					if (hwsel = HW_ZOAR or hwsel = HW_TISLAND) and fg_sp_rom_sel = '1' then
+					-- Zoar  : fg chars in 3x8k (fg_sp_graphx), sprites in 3x4k (fg_graphx)
+					-- tisland: fg chars in 3x4k (fg_graphx, t-13/t-10/t-0d),
+					--          sprites in 3x8k (fg_sp_graphx, t-11/t-12,t-0e/t-0f,t-0b/t-0c)
+					if (hwsel = HW_ZOAR and fg_sp_rom_sel = '1') or
+					   (hwsel = HW_TISLAND and fg_sp_rom_sel = '0') then
 						fg_sp_grphx_1 <= fg_grphx_1_do;
 						fg_sp_grphx_2 <= fg_grphx_2_do;
 						fg_sp_grphx_3 <= fg_grphx_3_do;
