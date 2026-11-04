@@ -1008,7 +1008,7 @@ module centipede(
    // during horizontal blanking pfa4..7 are held high enabling the motion object
    // circuitry to access the playfield memory for the motion objects to be displayed
 
-   assign pf_addr_stamp = hblank & ~s_256h;
+   assign pf_addr_stamp = ~s_256h;
 
    // force pf address to "stamp area" during hblank
    assign pfa7654 = pf_addr_stamp ? 4'b1111 : { s_128v, s_64v, s_32v, s_16v };

@@ -295,7 +295,7 @@ data_io data_io(
 
 reg reset;
 always @(posedge clk_12) reset <= status[0] | buttons[1] | ioctl_downl;
-wire  [7:0] RGB;
+wire  [8:0] RGB;
 wire        hs, vs, vb, hb;
 wire  [5:0] audio;
 
@@ -332,7 +332,7 @@ mist_dual_video #(.COLOR_DEPTH(3), .OUT_COLOR_DEPTH(VGA_BITS), .SD_HCNT_WIDTH(10
 	.SPI_DI         ( SPI_DI           ),
 	.R              ( RGB[2:0]         ),
 	.G              ( RGB[5:3]         ),
-	.B              ( RGB[7:6]         ),
+	.B              ( RGB[8:6]         ),
 	.HBlank         ( hb               ),
 	.VBlank         ( vb               ),
 	.HSync          ( hs               ),
