@@ -111,7 +111,7 @@ set_output_delay -clock [get_clocks $sdram2_clk] -reference_pin [get_ports {SDRA
 # Set Clock Groups
 #**************************************************************
 
-set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[*]}]
+set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[*] pll_rot|altpll_component|auto_generated|pll1|clk[*]}]
 
 #**************************************************************
 # Set False Path
@@ -151,3 +151,7 @@ set_multicycle_path -from {m92:m92|sound:sound|v35:v35|v30:core|*} -to {m92:m92|
 # Set Input Transition
 #**************************************************************
 
+set_multicycle_path -from {m92:m92|sound:sound|ga20:ga20|IIR_filter:lpf_sample|*} -to {m92:m92|sound:sound|ga20:ga20|IIR_filter:lpf_sample|*} -setup 2
+set_multicycle_path -from {m92:m92|sound:sound|ga20:ga20|IIR_filter:lpf_sample|*} -to {m92:m92|sound:sound|ga20:ga20|IIR_filter:lpf_sample|*} -hold 1
+set_multicycle_path -from {m92:m92|sound:sound|IIR_filter:lpf_ym|*} -to {m92:m92|sound:sound|IIR_filter:lpf_ym|*} -setup 2
+set_multicycle_path -from {m92:m92|sound:sound|IIR_filter:lpf_ym|*} -to {m92:m92|sound:sound|IIR_filter:lpf_ym|*} -hold 1

@@ -21,6 +21,7 @@ module sound(
     input reset,
 
     input paused,
+    input [1:0] sample_attn,
     input filter_en,
     input dbg_fm_en,
 
@@ -61,7 +62,11 @@ wire [15:0] sample_out, fm_sample, fm_sample_flt;
 
 localparam OVERALL_GAIN = 0.9;
 wire [11:0] fm_scale = int'(1.3 * OVERALL_GAIN * 128);
-wire [11:0] pcm_scale = int'(3.1 * OVERALL_GAIN * 128);
+// FX (GA20 PCM) volume, same steps as MiSTer scaled to the MiST mix level
+wire [11:0] pcm_scale = sample_attn == 3 ? int'(1.08 * OVERALL_GAIN * 128)
+                      : sample_attn == 2 ? int'(1.55 * OVERALL_GAIN * 128)
+                      : sample_attn == 1 ? int'(2.19 * OVERALL_GAIN * 128)
+                      : int'(3.1 * OVERALL_GAIN * 128);
 
 always_ff @(posedge clk_sys) begin
     reg [27:0] sum;
