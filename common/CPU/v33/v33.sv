@@ -1218,19 +1218,18 @@ always_ff @(posedge clk) begin
                             end else begin
                                 if (div_done) begin
                                     if (decoded.width == BYTE) begin
+                                        // AW even on overflow (fixes Gunforce stage 4 water)
+                                        reg_aw <= { div_rem[7:0], div_quot[7:0] };
                                         if (div_dbz | div_overflow) begin
                                             interrupt_vector <= 8'd0;
                                             exception = 1;
-                                        end else begin
-                                            reg_aw <= { div_rem[7:0], div_quot[7:0] };
                                         end
                                     end else begin
+                                        reg_aw <= div_quot[15:0];
+                                        reg_dw <= div_rem[15:0];
                                         if (div_dbz | div_overflow) begin
                                             interrupt_vector <= 8'd0;
                                             exception = 1;
-                                        end else begin
-                                            reg_aw <= div_quot[15:0];
-                                            reg_dw <= div_rem[15:0];
                                         end
                                     end
                                 end else begin

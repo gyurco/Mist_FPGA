@@ -163,6 +163,10 @@ localparam CONF_STR = {
 	"O7,Blending,Off,On;",
 `endif
 	"O8,Pause,Off,On;",
+	"OF,CPU Speed,Normal,Turbo;",
+`ifndef DEBUG
+	"O9A,FX Volume,Normal,Medium (-3dB),Low (-6dB),Lowest (-9dB);",
+`endif
 `ifdef DEBUG
 	"O9,Layer A,On,Off;",
 	"OA,Layer B,On,Off;",
@@ -186,8 +190,17 @@ wire        rotate    = status[3];
 wire  [1:0] scanlines = status[5:4];
 wire        joyswap   = status[6];
 wire        system_pause = status[8];
+wire        cpu_turbo = status[15];
+`ifdef DEBUG
 wire  [2:0] dbg_en_layers = ~status[11:9];
 wire        dbg_fm_en = ~status[12];
+wire  [1:0] sample_attn = 2'd0;
+`else
+// status[12:9] are only debug options in DEBUG builds; reuse 10:9 for FX volume
+wire  [2:0] dbg_en_layers = 3'b111;
+wire        dbg_fm_en = 1'b1;
+wire  [1:0] sample_attn = status[10:9];
+`endif
 wire        dbg_sprite_freeze = 0;
 wire  [1:0] orientation = {flipped, core_mod[0]};
 reg         oneplayer = 0;
@@ -584,7 +597,9 @@ m92 m92(
     .dbg_solid_sprites(),
     .sprite_freeze(dbg_sprite_freeze),
     .dbg_fm_en(dbg_fm_en),
-    .en_audio_filters(filters)
+    .en_audio_filters(filters),
+    .cpu_turbo(cpu_turbo),
+    .sample_attn(sample_attn)
 );
 
 mist_dual_video #(.COLOR_DEPTH(8), .SD_HCNT_WIDTH(10), .USE_BLANKS(1), .OUT_COLOR_DEPTH(VGA_BITS), .BIG_OSD(BIG_OSD)) mist_video(

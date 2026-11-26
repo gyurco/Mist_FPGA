@@ -56,6 +56,8 @@ module m92 (
 
     input cpu_turbo,
 
+    input [1:0] sample_attn,
+
     output [24:0] sdr_vram_addr,
     input [31:0] sdr_vram_data,
     output sdr_vram_req,
@@ -679,6 +681,7 @@ wire [15:0] sound_sample;
 sound sound(
     .clk_sys(clk_sys),
     .reset(sound_reset | ~reset_n),
+    .sample_attn(sample_attn),
     .filter_en(en_audio_filters),
     .dbg_fm_en(dbg_fm_en),
     .paused(paused),
